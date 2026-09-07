@@ -36,6 +36,7 @@ Each is written with the recommended option as the default. Strike the other or 
 - S-07 · The menu bar item · `f7c6c8f`
 - S-08 · Settings, persisted, with a window for the numbers · `84d2bf8`
 - S-09 · Notifications that say what happened and what happens next · `939d626`
+- S-10 · A real app in /Applications, and launch at login · `6466834`
 
 ## In progress
 
@@ -48,24 +49,6 @@ Each is written with the recommended option as the default. Strike the other or 
 ### Phase 2: sessions, guards, and what the agents are doing
 
 ### Phase 3: the menu
-
-#### S-10 · A real app in /Applications, and launch at login
-
-P1 · M · repo · admin
-
-Files: new `scripts/release.sh`, edit `Makefile`, `README.md`. Read `docs/notes.md`, "Building and testing".
-
-`scripts/release.sh`, in the shape of `~/kullanym-notch/scripts/release.sh` with the names changed and the icon checks removed (D10): generate, build Release into `build/`, check the bundle id is `com.meric.stayup`, check `Contents/MacOS/StayUp` exists, `codesign --verify --deep --strict`, check the hardened runtime flag, print the authority, ask `spctl` and say what its answer means; `install` replaces `/Applications/StayUp.app` (`pkill -x StayUp` first, `rm -rf` the old one, `ditto` the new one, `open` it); `zip` leaves `build/StayUp.zip`. `make release`, `make install`, `make zip` call it.
-
-Launch at login only registers for an app in `/Applications` (the note says why), so the `Launch at login` toggle from S-07 gets a guard: when `Bundle.main.bundleURL` is not under `/Applications`, the toggle is disabled and its label reads `Launch at login (run make install first)`.
-
-Accept:
-
-- [ ] `make install` ends with `open /Applications/StayUp.app` and the icon in the menu bar comes from that copy (`ps -o comm -p $(pgrep -x StayUp)` prints the `/Applications` path).
-- [ ] `Launch at login` on, log out and in (or reboot): the icon is there without a click, `SMAppService.mainApp.status` reads `.enabled` in the log.
-- [ ] Reboot with the flag deliberately left at 1 (`sudo pmset -a disablesleep 1`, then restart): after login `pmset -g | grep SleepDisabled` reads 0, cleared by the LaunchDaemon from S-03.
-
-Commit: `Ship StayUp as an app, not a build directory`
 
 ### Phase 4: proving it with the lid
 
