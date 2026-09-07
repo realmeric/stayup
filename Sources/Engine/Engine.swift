@@ -33,6 +33,9 @@ final class Engine: ObservableObject {
             keeper.settings = settings
             (agents as? AgentActivity)?.directories = settings.watchedDirectories
             store.save(settings)
+            // The screen is claimed from the settings rather than from an
+            // effect, so switching it off mid-session lets go on the spot.
+            syncScreen()
             if settings.hotkey != oldValue.hotkey
                 || settings.hotkeyEnabled != oldValue.hotkeyEnabled {
                 adoptHotkey()
@@ -46,6 +49,7 @@ final class Engine: ObservableObject {
     private let lid: LidSource
     private let agents: AgentSource
     private let writer: FlagWriting
+    private let screen: ScreenHolding
     private var notifier: Notifying
     private let store: SettingsStore
     private let helperStatus: (Bool) -> HelperStatus
@@ -65,6 +69,7 @@ final class Engine: ObservableObject {
          lid: LidSource = MachineLidSource(),
          agents: AgentSource = AgentActivity(),
          writer: FlagWriting? = nil,
+         screen: ScreenHolding = DisplayAssertion(),
          notifier: Notifying? = nil,
          helperStatus: @escaping (Bool) -> HelperStatus = { HelperInstaller.status(wanting: $0) },
          leaseBase: URL = Lease.directory,
@@ -78,6 +83,7 @@ final class Engine: ObservableObject {
         self.lid = lid
         self.agents = agents
         self.writer = writer ?? Engine.defaultWriter()
+        self.screen = screen
         self.notifier = notifier ?? LoggingNotifier()
         self.helperStatus = helperStatus
         self.leaseBase = leaseBase
@@ -218,7 +224,19 @@ final class Engine: ObservableObject {
                 notifier.deliver(notice)
             }
         }
+        syncScreen()
         refreshStatus(inputs: inputs)
+    }
+
+    /// The second sleep. The flag stops the Mac sleeping and does nothing at
+    /// all about the display, which powerd blanks on its own timer; this
+    /// follows the flag so the two go up and come down together.
+    private func syncScreen() {
+        if keeper.raised && settings.keepScreenOn {
+            screen.hold()
+        } else {
+            screen.release()
+        }
     }
 
     /// A writer that refuses is the end of the session, not a tick to retry:

@@ -33,6 +33,13 @@ survives a reboot, and nothing in the interface shows it is on. On 2026-09-03
 something set it on this Mac and the machine did not sleep once for the next 58
 hours. StayUp is that flag, raised for a reason and released for a reason.
 
+The screen keeps a third timer of its own, and the flag does not touch that
+one either: the Mac stays up and the display still goes dark after a couple of
+minutes on battery, which looks exactly like the app having stopped and is
+not. StayUp holds the screen up alongside the flag, as `caffeinate -d` does.
+Turn that half off in Settings › Sessions if you would rather it rest; with
+the lid closed the screen is dark either way.
+
 ## What it changes on your Mac
 
 You are asked for your password once. After that:

@@ -25,6 +25,7 @@ final class SettingsRoomTests: XCTestCase {
             "durations": .sessions,
             "indefiniteCap": .sessions,
             "warnBeforeEnd": .sessions,
+            "keepScreenOn": .sessions,
             "notifications": .general,
             "quickStart": .general,
             "startOnLaunch": .general,
@@ -75,6 +76,7 @@ final class SettingsRoomTests: XCTestCase {
     /// reads as nothing.
     func testEveryLabelSaysSomething() {
         let labels = [Copy.indefiniteCap, Copy.warnBeforeEnd, Copy.notifications,
+                      Copy.screen, Copy.keepScreenOn,
                       Copy.durations, Copy.addDuration, Copy.remove,
                       Copy.idleTimeout, Copy.followGrace, Copy.followCap,
                       Copy.watchedDirectories, Copy.addDirectory,

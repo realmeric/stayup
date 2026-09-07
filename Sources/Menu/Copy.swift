@@ -91,6 +91,15 @@ enum Copy {
     // MARK: - The settings window
 
     static let indefiniteCap = "Stop indefinite sessions after"
+    static let screen = "Screen"
+    static let keepScreenOn = "Keep the screen on"
+    static let keepScreenOnExplanation =
+        "The sleep flag holds the whole Mac awake through a lid close. The screen keeps a "
+        + "separate timer and goes dark on its own, which looks like StayUp stopping and is not. "
+        + "Off lets it rest; with the lid closed it is dark either way."
+    /// Read in `pmset -g assertions`, under `Listed by owning process`, which
+    /// is where anybody looking for what is holding the screen up will look.
+    static let screenAssertion = "StayUp is keeping the screen on"
     static let warnBeforeEnd = "Warn before the end"
     static let notifications = "Notifications"
     static let durations = "Durations in the menu"

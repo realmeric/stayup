@@ -32,6 +32,15 @@ struct Settings: Codable, Equatable {
     var watchedDirectories: [String] = ["~/.claude/projects", "~/.codex/sessions"]
     var notifications: Bool = true
     var warnBeforeEnd: TimeInterval = 300
+    /// Hold the screen on for as long as the flag is up.
+    ///
+    /// The flag is the system's sleep and the screen is its own timer; raising
+    /// one has never had anything to do with the other, and a Mac working with
+    /// the lid open would blank after two minutes on battery and look for all
+    /// the world like the app had stopped. On by default because that reading
+    /// is the one everybody has first. Off lets the screen rest while the Mac
+    /// keeps working, which is what a closed lid does anyway.
+    var keepScreenOn: Bool = true
 
     // MARK: What one click does
 

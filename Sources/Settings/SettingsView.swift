@@ -124,6 +124,14 @@ struct SettingsRoomView: View {
                 }
             }
 
+            Section {
+                Toggle(Copy.keepScreenOn, isOn: $engine.settings.keepScreenOn)
+            } header: {
+                Text(Copy.screen)
+            } footer: {
+                Text(Copy.keepScreenOnExplanation).font(.footnote).foregroundStyle(.secondary)
+            }
+
             Section(Copy.durations) {
                 ForEach(Array(engine.settings.durations.enumerated()), id: \.offset) { index, seconds in
                     HStack {

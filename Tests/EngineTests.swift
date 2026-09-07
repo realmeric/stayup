@@ -12,6 +12,7 @@ final class EngineTests: XCTestCase {
     private var lid: FakeLidSource!
     private var agents: FakeAgentSource!
     private var writer: FakeFlagWriter!
+    private var screen: FakeScreen!
     private var notifier: RecordingNotifier!
     private var helper: HelperStatus = .installed
     private var suite: String!
@@ -26,6 +27,7 @@ final class EngineTests: XCTestCase {
         lid = FakeLidSource()
         agents = FakeAgentSource()
         writer = FakeFlagWriter()
+        screen = FakeScreen()
         notifier = RecordingNotifier()
         helper = .installed
     }
@@ -46,6 +48,7 @@ final class EngineTests: XCTestCase {
                lid: lid,
                agents: agents,
                writer: writer,
+               screen: screen,
                notifier: notifier,
                helperStatus: { _ in self.helper },
                leaseBase: room,
@@ -85,6 +88,48 @@ final class EngineTests: XCTestCase {
         XCTAssertEqual(writer.raised, [true, false])
         XCTAssertNil(lease)
         XCTAssertEqual(engine.status.mode, .off)
+    }
+
+    /// The second sleep. The flag holds the machine awake and says nothing
+    /// about the display, so the screen is claimed alongside it and given back
+    /// with it; without this the Mac stays up and the screen goes dark after
+    /// two minutes on battery, which reads as the app having stopped.
+    func testAStartHoldsTheScreenAndAStopLetsItGo() {
+        let engine = makeEngine()
+        engine.start(.timed(until: Date().addingTimeInterval(1800)))
+        XCTAssertEqual(screen.claims, [true])
+        engine.stop()
+        XCTAssertEqual(screen.claims, [true, false])
+    }
+
+    /// The claim follows the flag rather than the session, so a guard that
+    /// lets the Mac sleep lets the screen sleep too.
+    func testAPauseLetsTheScreenGoAndAResumeTakesItBack() {
+        var settings = Settings.defaults
+        settings.thermalCalm = 0
+        let engine = makeEngine(settings: settings)
+        engine.start(.timed(until: Date().addingTimeInterval(1800)))
+        thermal.level = .critical
+        engine.tick()
+        XCTAssertEqual(screen.claims, [true, false])
+        thermal.level = .nominal
+        engine.tick()
+        XCTAssertEqual(screen.claims, [true, false, true])
+    }
+
+    /// Off means off, and off mid-session means the screen goes dark now
+    /// rather than at the end of the session.
+    func testTheScreenIsLeftAloneWhenTheSettingIsOff() {
+        var settings = Settings.defaults
+        settings.keepScreenOn = false
+        let engine = makeEngine(settings: settings)
+        engine.start(.timed(until: Date().addingTimeInterval(1800)))
+        XCTAssertEqual(screen.claims, [])
+        engine.settings.keepScreenOn = true
+        XCTAssertEqual(screen.claims, [true])
+        engine.settings.keepScreenOn = false
+        XCTAssertEqual(screen.claims, [true, false])
+        XCTAssertTrue(engine.status.raised)
     }
 
     /// A refusal is the end of the session, not a tick to retry. The message

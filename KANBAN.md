@@ -40,10 +40,11 @@ Each is written with the recommended option as the default. Strike the other or 
 - S-12 · README, and the way out · `936ff94`
 - S-14 · One click on a coffee cup, a shortcut, and an icon you choose · `35fd9d0`
 - S-13 · Prove the rule by using it, and grant it by uid · `1c31816`, `8610d71` (filed straight to Done: the card was lost to a concurrent board rewrite, the substance reached the executor through `docs/notes.md` and was built from there)
+- The screen's own timer, held alongside the flag (no card: reported directly, and the measurement that settled it is in `docs/notes.md`, "The two sleeps")
 
 ## In progress
 
-S-11 only. Everything above it is committed and the gate is green at 134 tests.
+S-11 only. Everything above it is committed and the gate is green at 164 tests.
 
 ## Left for you
 
