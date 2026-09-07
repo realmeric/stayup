@@ -5,3 +5,7 @@ DerivedData/
 *.xcworkspace
 xcuserdata/
 .swiftpm/
+
+# The landing page is assembled from its parts by landing/build.py.
+landing/index.html
+landing/artifact.html
