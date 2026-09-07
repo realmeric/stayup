@@ -35,6 +35,11 @@ targets:
     platform: macOS
     sources:
       - path: Sources
+        excludes: [Resources]
+      # The script and the plist ride along as files, not as compiled input:
+      # the install runs a copy of them from a temp directory as root.
+      - path: Sources/Resources
+        buildPhase: resources
     info:
       path: Sources/Info.plist
       properties:

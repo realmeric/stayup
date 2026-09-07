@@ -28,6 +28,7 @@ Each is written with the recommended option as the default. Strike the other or 
 ## Done
 
 - S-01 · Project skeleton that builds, signs and launches · `02da2c4`
+- S-02 · Read the machine · `799e6a9`
 
 ## In progress
 
@@ -36,30 +37,6 @@ Each is written with the recommended option as the default. Strike the other or 
 ## Ready
 
 ### Phase 1: the flag, and every way it comes down
-
-#### S-02 · Read the machine
-
-P0 · M · machine
-
-Files: new `Sources/Machine/SleepFlag.swift`, `Sources/Machine/Lid.swift`, `Sources/Machine/Power.swift`, `Sources/Machine/Thermal.swift`, `Sources/Machine/Shell.swift`, `Tests/SleepFlagTests.swift`, `Tests/PowerTests.swift`. Read `docs/notes.md`, "The two sleeps" and "Reading the machine".
-
-`Shell.swift`: `enum Shell` with one function, `static func run(_ path: String, _ args: [String]) throws -> (status: Int32, out: String, err: String)`, built on `Process` with `standardOutput` and `standardError` piped and `waitUntilExit`. Every shell call in the app goes through it, so a test can see what would have run: the function takes an optional `runner` override, `static var runner: ((String, [String]) throws -> (Int32, String, String))?`, that tests set and `tearDown` clears.
-
-`SleepFlag.swift`: `enum SleepFlag`. `static func read() -> Bool` runs `/usr/bin/pmset -g`, and returns true when a line's first whitespace-separated token is `SleepDisabled` and the second is `1`. The line is ` SleepDisabled\t\t1`, tab-separated with a leading space; a machine on which the flag was never set prints no such line, and that reads as false. `static func parse(_ text: String) -> Bool` is the pure half, and the tests feed it the three texts in the note.
-
-`Lid.swift`: `enum Lid` with `static func isClosed() -> Bool`. IOKit: `IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPMrootDomain"))`, then `IORegistryEntryCreateCFProperty(service, "AppleClamshellState" as CFString, kCFAllocatorDefault, 0)`, take the result as `CFBoolean`, release the service with `IOObjectRelease`. When the property is missing return false and log once. The fallback if the IOKit call will not compile cleanly under the hardened runtime is `Shell.run("/usr/sbin/ioreg", ["-r", "-k", "AppleClamshellState", "-d", "4"])` and a search for `"AppleClamshellState" = Yes`; the note shows the exact line.
-
-`Power.swift`: `struct PowerReading { onAC: Bool; percent: Int }` and `enum Power` with `static func read() -> PowerReading`. IOKit.ps: `IOPSCopyPowerSourcesInfo().takeRetainedValue()`, `IOPSGetProvidingPowerSourceType(blob).takeUnretainedValue() as String` equal to `kIOPSACPowerValue` (`"AC Power"`) for `onAC`, and the first source from `IOPSCopyPowerSourcesList` with its `IOPSGetPowerSourceDescription` dictionary's `kIOPSCurrentCapacityKey` (on this Mac already a percentage; if `kIOPSMaxCapacityKey` is not 100, divide) for `percent`. A Mac with no battery reads `onAC: true, percent: 100`. `static func parse(pmsetBatt: String) -> PowerReading` is a pure fallback fed by `pmset -g batt` (`Now drawing from 'Battery Power'` and ` -InternalBattery-0 (id=22806627)	76%; discharging; 13:26 remaining present: true`), tested, and used only if the IOKit read returns nothing.
-
-`Thermal.swift`: `enum ThermalLevel: Int, Comparable { nominal, fair, serious, critical }` with `init(_ state: ProcessInfo.ThermalState)`, and `enum Thermal { static func read() -> ThermalLevel }` from `ProcessInfo.processInfo.thermalState`. The notification wiring is S-06's.
-
-Accept:
-
-- [ ] `SleepFlagTests`: the three texts parse to 1, 0, and absent-is-false.
-- [ ] `PowerTests`: the two `pmset -g batt` texts in the note parse to `(false, 76)` and `(true, 100)`.
-- [ ] A throwaway `print` in `applicationDidFinishLaunching` (removed before commit) shows `flag false, lid false, ac <whatever the cable says>, <percent>%, thermal nominal` under `make run`, matching `pmset -g`, `pmset -g batt` and the cable.
-
-Commit: `Read the sleep flag, the lid, the battery and the heat`
 
 #### S-03 · The rule that lets the app raise the flag, installed once
 
