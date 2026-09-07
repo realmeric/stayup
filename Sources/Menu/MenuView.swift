@@ -49,9 +49,9 @@ struct MenuView: View {
             Button(Copy.setUp) { setUp() }
         }
         SettingsLink { Text(Copy.settings) }
-        Toggle(Copy.launchAtLogin, isOn: Binding(
-            get: { launchAtLogin },
-            set: { setLaunchAtLogin($0) }))
+        Toggle(installed ? Copy.launchAtLogin : Copy.launchAtLoginNeedsInstall,
+               isOn: Binding(get: { launchAtLogin }, set: { setLaunchAtLogin($0) }))
+            .disabled(!installed)
 
         Divider()
 
@@ -59,6 +59,12 @@ struct MenuView: View {
             engine.stop(reason: .quit)
             NSApp.terminate(nil)
         }
+    }
+
+    /// `SMAppService.mainApp.register()` only takes an app in /Applications;
+    /// from a build directory it reports success and nothing launches.
+    private var installed: Bool {
+        AppInfo.isInApplications
     }
 
     /// The one password. A cancelled dialog is an answer, not a failure, so it

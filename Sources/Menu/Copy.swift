@@ -82,6 +82,10 @@ enum Copy {
     static let settings = "Settings…"
     static let setUp = "Set up StayUp…"
     static let launchAtLogin = "Launch at login"
+    /// A login item only registers for an app in /Applications. From a build
+    /// directory `register()` reports success and nothing launches, so the
+    /// toggle says where the app has to be rather than lying quietly.
+    static let launchAtLoginNeedsInstall = "Launch at login (run make install first)"
     static let quit = "Quit"
 
     // MARK: - The settings window

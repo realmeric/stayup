@@ -80,7 +80,11 @@ The unit test bundle is hosted by the app, so `xcodebuild test` runs `applicatio
 
 Signing: `Apple Development: developer@example.com (CERT_ID)`, the only identity here. The team is the certificate's OU, `TEAM_ID`; the string in parentheses is the certificate's own name and xcodebuild rejects it as a team. Hardened runtime on, sandbox off: the app runs `sudo` and `osascript` and reads under `~/.claude`, none of which a sandboxed process can do. Ad-hoc signing would also work for this app, since it keeps nothing in the keychain, but the same identity as Kullanym Notch costs nothing and keeps `make install` builds consistent.
 
+The Release build cannot land in the repository. This one lives under `~/Documents`, which iCloud Drive syncs, and the file provider stamps every bundle inside it with `com.apple.FinderInfo` and `com.apple.fileprovider.fpfs#P`. `codesign` then refuses the app with `resource fork, Finder information, or similar detritus not allowed`, and a copy made with `ditto --norsrc --noextattr --noqtn` is stamped again before the next command runs. Measured 2026-09-07. Debug builds never hit it because they land in DerivedData under `~/Library`; `scripts/release.sh` writes to `~/Library/Caches/StayUp/build` for the same reason.
+
 xcodegen 2.46.0, `project.yml` is the source and `*.xcodeproj` is ignored. `SWIFT_VERSION: "5.0"` with `SWIFT_STRICT_CONCURRENCY: minimal` keeps Swift 6.3's strict concurrency from arguing with AppKit callbacks; the engine is `@MainActor` and everything else is plain.
+
+The same sync bites the gate. A test that reads a file out of the working tree can block while the file provider materialises it: `ReleaseScriptTests` took 245 s on the first run after `scripts/release.sh` was written and 0.019 s on the next. The tests that read the install script and the guard read them out of the built app bundle in DerivedData instead, which nothing syncs.
 
 Logs: the app has no window, so `/usr/bin/log stream --predicate 'subsystem == "com.meric.stayup"' --level debug`. `/usr/bin/log`, because zsh has a builtin called `log`.
 

@@ -7,4 +7,13 @@ final class AppInfoTests: XCTestCase {
     func testBundleID() {
         XCTAssertEqual(AppInfo.bundleID, "com.meric.stayup")
     }
+
+    /// The test run is hosted by a build in DerivedData, which is exactly the
+    /// case the launch-at-login toggle has to refuse: `SMAppService` reports
+    /// success there and nothing ever launches.
+    func testABuildDirectoryIsNotAnInstall() {
+        XCTAssertFalse(AppInfo.isInApplications)
+        XCTAssertNotEqual(Copy.launchAtLogin, Copy.launchAtLoginNeedsInstall)
+        XCTAssertTrue(Copy.launchAtLoginNeedsInstall.contains("make install"))
+    }
 }

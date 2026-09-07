@@ -35,6 +35,7 @@ Each is written with the recommended option as the default. Strike the other or 
 - S-06 · Sources and the engine that ticks them · `6af1b27`
 - S-07 · The menu bar item · `f7c6c8f`
 - S-08 · Settings, persisted, with a window for the numbers · `84d2bf8`
+- S-09 · Notifications that say what happened and what happens next · `939d626`
 
 ## In progress
 
@@ -47,21 +48,6 @@ Each is written with the recommended option as the default. Strike the other or 
 ### Phase 2: sessions, guards, and what the agents are doing
 
 ### Phase 3: the menu
-
-#### S-09 · Notifications that say what happened and what happens next
-
-P1 · S · menu
-
-Files: new `Sources/Engine/UserNotifier.swift`, edit `Sources/Engine/Notifier.swift`, `Tests/NoticeCopyTests.swift`.
-
-`UserNotifier: Notifying` on `UNUserNotificationCenter.current()`. Authorization is requested with `[.alert, .sound]` the first time a session starts, not at launch. Each `Notice` becomes a title and a body through `Copy.notice(_:)`, tested: `.paused(.thermal)` → `Paused: too hot` / `The Mac will sleep if the lid is closed. Open it when it has cooled and StayUp resumes.`; `.paused(.battery)` → `Paused: battery low` / `Plug in to resume.`; `.paused(.charging)` → `Paused: not charging` / `Only while charging is on. Plug in to resume.`; `.resumed` → `Awake again` / (empty); `.ended(.timer)` → `Time is up` / `The Mac can sleep now.`; `.ended(.agentsIdle)` → `The agents finished` / `No transcript has been written for 3 minutes. The Mac can sleep now.` (the minutes from settings); `.ended(.cap)` → `Session cap reached` / `StayUp has been on for 24 hours and stopped itself.`; `.warning(300)` → `5 minutes left` / `Start another session from the menu to keep going.`; `.thermalWarning` → `Getting hot` / `Still awake. StayUp pauses at critical; change that in Settings.`. When `settings.notifications` is off the notifier logs and does nothing else. Delivered with `interruptionLevel: .timeSensitive` for the two pauses and the cap, `.active` for the rest.
-
-Accept:
-
-- [ ] `make test` green, `NoticeCopyTests` covering every case of `Notice`.
-- [ ] `manual`: the first Start asks for notification permission; `STAYUP_FAKE_THERMAL=critical make run` and Start shows `Paused: too hot` as a banner.
-
-Commit: `Say what happened in a notification, and what to do about it`
 
 #### S-10 · A real app in /Applications, and launch at login
 

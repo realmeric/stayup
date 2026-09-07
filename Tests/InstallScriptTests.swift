@@ -88,3 +88,45 @@ final class InstallScriptTests: XCTestCase {
         XCTAssertEqual(parsed?["RunAtLoad"] as? Bool, true)
     }
 }
+
+/// The release script never runs in a test - it builds, signs and can write to
+/// /Applications. What is checked is that it parses, and that the two things
+/// it refuses to ship without are still the things it looks for.
+final class ReleaseScriptTests: XCTestCase {
+    private func script() throws -> String {
+        let url = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("scripts/release.sh")
+        return try String(contentsOf: url, encoding: .utf8)
+    }
+
+    func testItParses() throws {
+        let url = URL(fileURLWithPath: #filePath)
+            .deletingLastPathComponent()
+            .deletingLastPathComponent()
+            .appendingPathComponent("scripts/release.sh")
+        let result = try Shell.run("/bin/zsh", ["-n", url.path])
+        XCTAssertEqual(result.status, 0, result.err)
+    }
+
+    /// An app without `LSUIElement` takes a Dock tile, which for a menu bar
+    /// app is the difference between shipped and half-shipped.
+    func testItRefusesAnAppThatWouldAppearOnTheDock() throws {
+        XCTAssertTrue(try script().contains("LSUIElement"))
+    }
+
+    /// And one without its resources cannot set itself up at all.
+    func testItRefusesAnAppMissingItsResources() throws {
+        let text = try script()
+        for resource in ["install-helper.sh", "guard.sh", "com.meric.stayup.reset.plist"] {
+            XCTAssertTrue(text.contains(resource), resource)
+        }
+    }
+
+    /// The build stays out of the repository on purpose; a synced bundle
+    /// cannot be signed.
+    func testItBuildsOutsideTheRepository() throws {
+        XCTAssertTrue(try script().contains("$HOME/Library/Caches/StayUp/build"))
+    }
+}
