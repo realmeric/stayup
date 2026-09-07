@@ -30,9 +30,19 @@ enum HelperInstaller {
 
     static func install() throws {
         try runScript(arguments: [])
+        // The agent needs no password, so it goes in behind the same click
+        // rather than asking for a second one. A rule without a guard is the
+        // half of this that can leave the flag up, so a failure here is worth
+        // a line in the log even though the install itself worked.
+        do {
+            try GuardAgent.install()
+        } catch {
+            Log.flag.error("the rule is in and the guard agent is not: \(String(describing: error), privacy: .public)")
+        }
     }
 
     static func uninstall() throws {
+        try? GuardAgent.uninstall()
         try runScript(arguments: ["remove"])
     }
 

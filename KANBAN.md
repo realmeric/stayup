@@ -29,6 +29,7 @@ Each is written with the recommended option as the default. Strike the other or 
 
 - S-01 · Project skeleton that builds, signs and launches · `02da2c4`
 - S-02 · Read the machine · `799e6a9`
+- S-03 · The rule that lets the app raise the flag, installed once · `640bcf2`
 
 ## In progress
 
@@ -37,31 +38,6 @@ Each is written with the recommended option as the default. Strike the other or 
 ## Ready
 
 ### Phase 1: the flag, and every way it comes down
-
-#### S-03 · The rule that lets the app raise the flag, installed once
-
-P0 · L · helper · admin
-
-Files: new `Sources/Helper/HelperInstaller.swift`, `Sources/Helper/FlagWriter.swift`, `Sources/Helper/Lease.swift`, `Sources/Resources/install-helper.sh`, `Sources/Resources/com.meric.stayup.reset.plist`, `Tests/LeaseTests.swift`, `Tests/FlagWriterTests.swift`, `Tests/InstallScriptTests.swift`. Read `docs/notes.md`, "Raising the flag without a password" and "Never stuck".
-
-`Lease.swift`: `struct Lease` at `~/Library/Application Support/StayUp/lease`, a single line, the expiry as ISO-8601 with fractional seconds off. `static func renew(until: Date)` writes it atomically (`Data.write(options: .atomic)`), `static func clear()` removes it, `static func read() -> Date?` parses it. The directory is created on first write with `FileManager.createDirectory(withIntermediateDirectories: true)`. A `base: URL` parameter, defaulting to the real path, lets tests point it at a temp directory.
-
-`FlagWriter.swift`: `protocol FlagWriting { func raise() throws; func release() throws }`. `struct SudoFlagWriter: FlagWriting` runs `Shell.run("/usr/bin/sudo", ["-n", "/usr/bin/pmset", "-a", "disablesleep", "1"])` and the same with `"0"`; a non-zero status throws `FlagError.refused(stderr)`. `-n` is what makes a missing rule fail in a millisecond with `sudo: a password is required` instead of hanging on a prompt the app can never answer. `struct DryRunFlagWriter: FlagWriting` only logs, and is chosen when `STAYUP_DRY_RUN` is in the environment. `final class FakeFlagWriter: FlagWriting` records `raised: [Bool]` for tests. The writer is the only place in the app that ever says `pmset`; the guard script is the other, and it is a script.
-
-`HelperInstaller.swift`: `enum HelperStatus { installed, missing }` and `enum HelperInstaller`. `static func status() -> HelperStatus` runs `/usr/bin/sudo -n -l /usr/bin/pmset -a disablesleep 1`: exit 0 means the rule is there, anything else means missing. `static func install() throws` copies `install-helper.sh` from the bundle's resources to a temp path, `chmod 755`, then runs `/usr/bin/osascript -e 'do shell script "/bin/sh \"<path>\" \"<user>\"" with administrator privileges'`; the user is `NSUserName()`. A status other than 0 throws with osascript's stderr, which for a cancelled prompt contains `User canceled` (`-128`), and the caller shows that as "not installed" rather than an error. `static func uninstall() throws` is the same with `remove` as the second argument.
-
-`install-helper.sh`, `set -eu`, takes `user` and an optional `remove`. Install: write `/etc/sudoers.d/stayup` to a temp file with the one line `<user> ALL=(root) NOPASSWD: /usr/bin/pmset -a disablesleep 1, /usr/bin/pmset -a disablesleep 0`, run `/usr/sbin/visudo -cf` on the temp file and stop if it fails, then `install -o root -g wheel -m 0440` it into place. Then write `/Library/LaunchDaemons/com.meric.stayup.reset.plist` from the resource beside it (`Label` `com.meric.stayup.reset`, `ProgramArguments` `/usr/bin/pmset -a disablesleep 0`, `RunAtLoad` true), `chown root:wheel`, `chmod 644`, `launchctl bootout system/com.meric.stayup.reset` ignoring failure, `launchctl bootstrap system` the plist. Last, `pmset -a disablesleep 0`, because the moment the rule exists is a good moment for the flag to be known to be down. Remove: bootout the daemon, delete both files, `pmset -a disablesleep 0`. The script prints one line per step so osascript's output reads as a receipt in the log.
-
-`InstallScriptTests`: the script parses under `sh -n`, the sudoers line it would write for user `alice` passes `visudo -cf` (run through a temp file; `visudo -c` needs no root for `-f`), and the plist resource is valid under `plutil -lint`.
-
-Accept:
-
-- [ ] `make test` green: `LeaseTests` (write, read back, clear, missing reads nil), `FlagWriterTests` (the fake records the order, the sudo writer asks `Shell` for exactly `/usr/bin/sudo -n /usr/bin/pmset -a disablesleep 1` and throws on status 1), `InstallScriptTests`.
-- [ ] `manual`, `admin`: a throwaway menu item or a `STAYUP_INSTALL=1` env hook at launch (removed before commit, S-07 gives it a home) runs `install()`; the password prompt names StayUp; afterwards `sudo -n -l /usr/bin/pmset -a disablesleep 1` prints the command and exits 0, `cat /etc/sudoers.d/stayup` shows the one line with your user, `sudo launchctl print system/com.meric.stayup.reset` finds the daemon, and `ls -l /etc/sudoers.d/stayup` reads `-r--r-----  root  wheel`.
-- [ ] With the rule in place, `SudoFlagWriter().raise()` then `pmset -g | grep SleepDisabled` reads 1, `release()` reads 0, both without a prompt.
-- [ ] `uninstall()` reverses all of it and `status()` reads `missing` again; then install once more and leave it installed.
-
-Commit: `Let the app raise the sleep flag with one password, once`
 
 #### S-04 · The guard that drops the flag when the app cannot
 
