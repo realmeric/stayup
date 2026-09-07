@@ -27,39 +27,13 @@ Each is written with the recommended option as the default. Strike the other or 
 
 ## Done
 
-(empty)
+- S-01 · Project skeleton that builds, signs and launches · `02da2c4`
 
 ## In progress
 
 (empty; one card at a time)
 
 ## Ready
-
-### Phase 0: a build that signs and launches
-
-#### S-01 · Project skeleton that builds, signs and launches
-
-P0 · M · repo
-
-Files: new `project.yml`, `Makefile`, `.gitignore`, `LICENSE`, `README.md`, `Sources/App/Main.swift`, `Sources/App/AppDelegate.swift`, `Sources/App/Log.swift`, `Sources/App/AppInfo.swift`, `Sources/Info.plist` (generated), `Tests/AppInfoTests.swift`. Read `docs/notes.md`, "Building and testing".
-
-`git init -b main`. `project.yml` for XcodeGen: `name: StayUp`, `bundleIdPrefix: com.meric`, `deploymentTarget.macOS: "15.0"`, `SWIFT_VERSION: "5.0"`, `SWIFT_STRICT_CONCURRENCY: minimal`, `MARKETING_VERSION: "0.1.0"`, `CURRENT_PROJECT_VERSION: "1"`, `CODE_SIGN_IDENTITY: "Apple Development"`, `CODE_SIGN_STYLE: Manual`, `DEVELOPMENT_TEAM: TEAM_ID`, `CODE_SIGNING_REQUIRED: "YES"`, `ENABLE_HARDENED_RUNTIME: "YES"`, `ENABLE_APP_SANDBOX: "NO"`, `ENABLE_USER_SCRIPT_SANDBOXING: "NO"`. The sandbox stays off because the app runs `sudo` and reads other tools' files under the home directory; a comment above the two keys says so. Two targets: the app from `Sources`, `GENERATE_INFOPLIST_FILE: "NO"`, an `info:` block writing `CFBundleName: StayUp`, `CFBundleDisplayName: StayUp`, `CFBundleShortVersionString: "$(MARKETING_VERSION)"`, `CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"`, `LSMinimumSystemVersion: "15.0"`, `LSUIElement: true` (this is what keeps it off the Dock), `NSHumanReadableCopyright: "Copyright © 2026 Meric Kucukmeric"`, and `PRODUCT_BUNDLE_IDENTIFIER: com.meric.stayup`; the test bundle `StayUpTests` from `Tests`, depending on the app, `GENERATE_INFOPLIST_FILE: "YES"`, `PRODUCT_BUNDLE_IDENTIFIER: com.meric.stayup.tests`. One scheme building the app and testing the bundle. No `PRODUCT_NAME`, no `PRODUCT_MODULE_NAME`, no `TEST_HOST`: the names all agree, so xcodegen's defaults are right.
-
-`Makefile`, copied in shape from `~/kullanym-notch/Makefile` with the names changed: `export DEVELOPER_DIR`, `gen` (`xcodegen generate`), `build`, `test`, `run` (build, find `BUILT_PRODUCTS_DIR` from `-showBuildSettings`, `pkill -x StayUp || true`, `open` the app), `release`, `install`, `clean`. `release` and `install` call `scripts/release.sh`, which S-10 writes; until then the two targets exist and fail with "S-10". `.gitignore`: `.DS_Store`, `build/`, `DerivedData/`, `*.xcodeproj`, `*.xcworkspace`, `xcuserdata/`, `.swiftpm/`.
-
-`Main.swift`: `@main struct StayUpApp: App` with `@NSApplicationDelegateAdaptor(AppDelegate.self)` and, for now, a `Settings { EmptyView() }` scene so `App` has a scene at all; S-07 replaces it with the `MenuBarExtra`. `AppDelegate`: return early from `applicationDidFinishLaunching` when `XCTestConfigurationFilePath` is in `ProcessInfo.processInfo.environment`, otherwise `NSApp.setActivationPolicy(.accessory)` and log `launched`. `applicationShouldTerminateAfterLastWindowClosed` returns false. `Log.swift`: `enum Log` with a `Logger(subsystem: AppInfo.bundleID, category:)` each for `app`, `flag`, `keeper`, `sources`, `menu`. `AppInfo`: `bundleID` (`Bundle.main.bundleIdentifier ?? "com.meric.stayup"`), `version`, `name`.
-
-`LICENSE` is MIT with `Copyright (c) 2026 Meric Kucukmeric`. `README.md` is a stub, one paragraph on what it is and the two build commands; S-12 writes the real one.
-
-`Tests/AppInfoTests.swift`: one test that `AppInfo.bundleID` is `com.meric.stayup`, so the gate has a test to run.
-
-Accept:
-
-- [ ] `make test` green.
-- [ ] `make run` launches; nothing appears on the Dock; `codesign -dv --verbose=2` on the app prints `Authority=Apple Development: developer@example.com (CERT_ID)` and `TeamIdentifier=TEAM_ID`.
-- [ ] `/usr/bin/log stream --predicate 'subsystem == "com.meric.stayup"'` shows `launched`.
-
-Commit: `Start StayUp with a build that signs and launches`
 
 ### Phase 1: the flag, and every way it comes down
 
@@ -303,4 +277,5 @@ Unranked. Promote by writing a card.
 - Watch `~/.claude-<slug>` profiles the way the notch does (`docs/notes.md`, "Claude Code's files"); today only `~/.claude` is on the default list.
 - A `Pause` item in the menu that holds the flag down without ending the session, for a hot minute.
 - Kullanym Notch could show a small mark while StayUp is raised; the lease file is the signal and needs no protocol.
+- `Package.swift` in the root points at a `Sources/Stayup` that does not exist and nothing builds through it; xcodegen is the source. Delete it or make it build.
 - `ttyskeepawake 1` is set on this Mac and keeps idle sleep off whenever iTerm2 has a live tty. Not this app's business, but the README could mention it.
