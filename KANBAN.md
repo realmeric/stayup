@@ -30,6 +30,7 @@ Each is written with the recommended option as the default. Strike the other or 
 - S-01 · Project skeleton that builds, signs and launches · `02da2c4`
 - S-02 · Read the machine · `799e6a9`
 - S-03 · The rule that lets the app raise the flag, installed once · `640bcf2`
+- S-04 · The guard that drops the flag when the app cannot · `285abab`
 
 ## In progress
 
@@ -38,25 +39,6 @@ Each is written with the recommended option as the default. Strike the other or 
 ## Ready
 
 ### Phase 1: the flag, and every way it comes down
-
-#### S-04 · The guard that drops the flag when the app cannot
-
-P0 · M · helper
-
-Files: new `Sources/Resources/guard.sh`, `Sources/Helper/GuardAgent.swift`, `Tests/GuardScriptTests.swift`. Read `docs/notes.md`, "Never stuck".
-
-`guard.sh`, `set -u`, no dependencies beyond `/usr/bin`: read `SleepDisabled` from `/usr/bin/pmset -g` (the same first-two-tokens rule as `SleepFlag.parse`); exit 0 if it is not 1. Read the lease at `$HOME/Library/Application Support/StayUp/lease`; if the file is missing, or its date parsed with `/bin/date -j -f "%Y-%m-%dT%H:%M:%SZ" -u` is before now, run `/usr/bin/sudo -n /usr/bin/pmset -a disablesleep 0` and print `stayup guard: flag cleared, lease <missing|expired at ...>`. Otherwise exit 0 silently. Every path is absolute. The script never calls `sleepnow`: a lease can lapse because the app hung for a minute, and a guard that puts the Mac to sleep on a hunch is the wrong kind of safety; it clears the flag, and if the lid is closed powerd takes it from there.
-
-`GuardAgent.swift`: `enum GuardAgent` with `static func install() throws` and `uninstall()`, no admin needed. Install copies `guard.sh` to `~/Library/Application Support/StayUp/guard.sh` (mode 755), writes `~/Library/LaunchAgents/com.meric.stayup.guard.plist` (`Label` `com.meric.stayup.guard`, `ProgramArguments` the script's absolute path, `StartInterval` 60, `RunAtLoad` true, `StandardOutPath` and `StandardErrorPath` both `~/Library/Logs/StayUp/guard.log`), then `launchctl bootout gui/<uid>/com.meric.stayup.guard` ignoring failure and `launchctl bootstrap gui/<uid> <plist>`; the uid is `getuid()`. `static func status() -> Bool` is `launchctl print gui/<uid>/com.meric.stayup.guard` exiting 0. `HelperInstaller.install()` from S-03 calls `GuardAgent.install()` after the admin step succeeds, and `uninstall()` the reverse, so the two are one setup from the user's side.
-
-`GuardScriptTests`: the script parses under `sh -n`; run with `HOME` pointed at a temp directory and `PATH` prepended with a directory holding a fake `pmset` (prints ` SleepDisabled\t\t1`) and a fake `sudo` (appends its arguments to a file), a missing lease makes the fake sudo receive `-n /usr/bin/pmset -a disablesleep 0`; a lease one hour ahead makes it receive nothing; a lease one hour behind makes it receive the clear. Because the script uses absolute paths, the test rewrites those two paths in a copy of the script before running it; say so in a comment.
-
-Accept:
-
-- [ ] `make test` green, `GuardScriptTests` included.
-- [ ] `manual`: after `GuardAgent.install()`, `launchctl print gui/501/com.meric.stayup.guard` shows it loaded with `interval = 60`. Raise the flag by hand with `sudo -n pmset -a disablesleep 1` and no lease file: within 60 s the guard log reads `flag cleared, lease missing` and `pmset -g | grep SleepDisabled` is 0. Write a lease 10 minutes ahead, raise the flag again: 60 s later it is still 1. Remove the lease.
-
-Commit: `Drop the flag on a timer when the app is not there to do it`
 
 ### Phase 2: sessions, guards, and what the agents are doing
 
@@ -230,5 +212,6 @@ Unranked. Promote by writing a card.
 - Watch `~/.claude-<slug>` profiles the way the notch does (`docs/notes.md`, "Claude Code's files"); today only `~/.claude` is on the default list.
 - A `Pause` item in the menu that holds the flag down without ending the session, for a hot minute.
 - Kullanym Notch could show a small mark while StayUp is raised; the lease file is the signal and needs no protocol.
+- A session that runs out while it is paused ends without a word, because the release already happened. S-05 wrote it that way on purpose; whether the ended notice should fire anyway is a question for the day it surprises somebody.
 - `Package.swift` in the root points at a `Sources/Stayup` that does not exist and nothing builds through it; xcodegen is the source. Delete it or make it build.
 - `ttyskeepawake 1` is set on this Mac and keeps idle sleep off whenever iTerm2 has a live tty. Not this app's business, but the README could mention it.

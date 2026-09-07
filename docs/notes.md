@@ -32,15 +32,17 @@ powerd's own log lines, for reading later with `/usr/bin/log show --predicate 's
 
 ## Raising the flag without a password
 
-`sudo -n` never prompts: with a rule it runs, without one it exits 1 in a millisecond with `sudo: a password is required` on stderr. `sudo -n -l /usr/bin/pmset -a disablesleep 1` answers whether a rule exists: exit 0 and the command echoed back if allowed, exit 1 otherwise. A GUI app with no tty can run `sudo -n` fine; it is the prompt that needs a tty, and `-n` removes the prompt.
+`sudo -n` never prompts: with a rule it runs, without one it exits 1 in a millisecond with `sudo: a password is required` on stderr. A GUI app with no tty can run `sudo -n` fine; it is the prompt that needs a tty, and `-n` removes the prompt.
 
-The rule, one line in `/etc/sudoers.d/stayup`, mode 0440, owner `root:wheel`:
+Whether the rule works is answered by using it, not by asking. `sudo -n -l /usr/bin/pmset -a disablesleep 1` lists the rule (exit 0, the command echoed back), but Vorssaint's issue #269 collected Macs on which `-l` said yes and the real call still prompted, so the app probes with the real call: `sudo -n /usr/bin/pmset -a disablesleep <v>` where `v` is the value the app wants right now (1 while a session holds the flag, 0 otherwise). Re-applying the wanted value changes nothing and cannot resurrect a stale 1 over a clear the guard just made, which is the race a probe that re-applies the value it read has to serialize against.
+
+The rule, one line in `/etc/sudoers.d/stayup`, mode 0440, owner `root:wheel`, the user named by uid:
 
 ```
-alice ALL=(root) NOPASSWD: /usr/bin/pmset -a disablesleep 1, /usr/bin/pmset -a disablesleep 0
+#501 ALL=(root) NOPASSWD: /usr/bin/pmset -a disablesleep 1, /usr/bin/pmset -a disablesleep 0
 ```
 
-Arguments in a sudoers command are matched exactly, so `pmset -a disablesleep 1` is allowed and `pmset -a sleep 0` is not. Check any candidate with `visudo -cf <file>` before installing it; a syntax error in `sudoers.d` can lock every `sudo` on the machine. `visudo -cf` on a file you own needs no root.
+`#uid` is sudoers' own user spec. A short name is free-form text (on an SSO-enrolled Mac it can be `name@company.com`, Vorssaint's #915), and it would have to be sanitized against sudoers and the shell both; digits read the same to every interpreter. `visudo -cf` accepts the form. Arguments in a sudoers command are matched exactly, so `pmset -a disablesleep 1` is allowed and `pmset -a sleep 0` is not, and the rule and the call must agree on `-a`. Check any candidate with `visudo -cf <file>` before installing it; a syntax error in `sudoers.d` can lock every `sudo` on the machine. `visudo -cf` on a file you own needs no root.
 
 The admin prompt: `/usr/bin/osascript -e 'do shell script "/bin/sh \"/path/to/install-helper.sh\" \"alice\"" with administrator privileges'`. The dialog names the calling app. A cancelled dialog exits with `-128` and `User canceled.` on stderr. The script runs as root with a minimal environment, so every path in it is absolute.
 
