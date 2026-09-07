@@ -38,6 +38,7 @@ Each is written with the recommended option as the default. Strike the other or 
 - S-09 · Notifications that say what happened and what happens next · `939d626`
 - S-10 · A real app in /Applications, and launch at login · `6466834`
 - S-12 · README, and the way out · `936ff94`
+- S-13 · Prove the rule by using it, and grant it by uid · `1c31816`, `8610d71` (filed straight to Done: the card was lost to a concurrent board rewrite, the substance reached the executor through `docs/notes.md` and was built from there)
 
 ## In progress
 
