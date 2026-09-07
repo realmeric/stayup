@@ -14,11 +14,13 @@ final class EngineTests: XCTestCase {
     private var writer: FakeFlagWriter!
     private var notifier: RecordingNotifier!
     private var helper: HelperStatus = .installed
+    private var suite: String!
 
     override func setUpWithError() throws {
         try super.setUpWithError()
+        suite = "engine-\(UUID().uuidString)"
         room = URL(fileURLWithPath: NSTemporaryDirectory())
-            .appendingPathComponent("engine-\(UUID().uuidString)", isDirectory: true)
+            .appendingPathComponent(suite, isDirectory: true)
         thermal = FakeThermalSource()
         power = FakePowerSource()
         lid = FakeLidSource()
@@ -29,13 +31,16 @@ final class EngineTests: XCTestCase {
     }
 
     override func tearDown() {
+        UserDefaults().removePersistentDomain(forName: suite)
         try? FileManager.default.removeItem(at: room)
         Shell.runner = nil
         super.tearDown()
     }
 
     private func makeEngine(settings: Settings = .defaults) -> Engine {
-        Engine(settings: settings,
+        // Its own defaults suite: nothing under Tests/ writes to the real one.
+        Engine(store: SettingsStore(defaults: UserDefaults(suiteName: suite)!),
+               settings: settings,
                thermal: thermal,
                power: power,
                lid: lid,

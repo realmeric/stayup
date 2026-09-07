@@ -83,4 +83,51 @@ enum Copy {
     static let setUp = "Set up StayUp…"
     static let launchAtLogin = "Launch at login"
     static let quit = "Quit"
+
+    // MARK: - The settings window
+
+    static let roomSessions = "Sessions"
+    static let roomAgents = "Agents"
+    static let roomGuards = "Guards"
+    static let roomHelper = "Helper"
+
+    static let indefiniteCap = "Stop indefinite sessions after"
+    static let warnBeforeEnd = "Warn before the end"
+    static let notifications = "Notifications"
+    static let durations = "Durations in the menu"
+    static let addDuration = "Add a duration"
+    static let remove = "Remove"
+
+    static let idleTimeout = "Call the agents idle after"
+    static let followGrace = "Wait this long before believing it"
+    static let followCap = "Stop following after"
+    static let watchedDirectories = "Transcripts to watch"
+    static let addDirectory = "Add a directory"
+
+    static let heat = "Heat"
+    static let battery = "Battery"
+    static let thermalPauseLevel = "Pause at"
+    static let levelCritical = "Critical"
+    static let levelSerious = "Serious"
+    static let thermalCalm = "Resume after this much calm"
+    static let batteryFloor = "Pause below"
+    static let batteryResume = "Resume at"
+
+    static let helperRule = "Sudoers rule"
+    static let helperGuard = "Guard agent"
+    static let installed = "Installed"
+    static let notInstalled = "Not installed"
+    static let installHelper = "Install…"
+    static let removeHelper = "Remove…"
+    static let helperExplanation = """
+        StayUp asks for your password once, to allow itself two commands \
+        without one: raising and lowering the sleep flag. Removing it takes \
+        away the rule, the guard that clears a forgotten flag every minute, \
+        and the reset that clears one at boot.
+        """
+
+    /// 0 hours is not "0 h"; it is the setting this app exists because of.
+    static func cap(_ seconds: TimeInterval) -> String {
+        seconds == 0 ? "no cap" : duration(seconds)
+    }
 }

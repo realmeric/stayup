@@ -25,9 +25,15 @@ struct Status: Equatable {
 @MainActor
 final class Engine: ObservableObject {
     @Published private(set) var status = Status()
-    var settings: Settings {
-        get { keeper.settings }
-        set { keeper.settings = newValue }
+
+    /// Changed from the menu and from the settings window, and written down
+    /// the moment it changes: there is no Save button anywhere in this app.
+    @Published var settings: Settings {
+        didSet {
+            keeper.settings = settings
+            (agents as? AgentActivity)?.directories = settings.watchedDirectories
+            store.save(settings)
+        }
     }
 
     private var keeper: Keeper
@@ -37,6 +43,7 @@ final class Engine: ObservableObject {
     private let agents: AgentSource
     private let writer: FlagWriting
     private var notifier: Notifying
+    private let store: SettingsStore
     private let helperStatus: (Bool) -> HelperStatus
     private let leaseBase: URL
     private let interval: TimeInterval
@@ -47,7 +54,8 @@ final class Engine: ObservableObject {
     /// two cannot.
     private let leaseAhead: TimeInterval = 120
 
-    init(settings: Settings = .defaults,
+    init(store: SettingsStore = SettingsStore(),
+         settings: Settings? = nil,
          thermal: ThermalSource = MachineThermalSource(),
          power: PowerSource = MachinePowerSource(),
          lid: LidSource = MachineLidSource(),
@@ -57,6 +65,9 @@ final class Engine: ObservableObject {
          helperStatus: @escaping (Bool) -> HelperStatus = { HelperInstaller.status(wanting: $0) },
          leaseBase: URL = Lease.directory,
          interval: TimeInterval = 20) {
+        let settings = settings ?? store.load()
+        self.store = store
+        self.settings = settings
         self.keeper = Keeper(settings: settings)
         self.thermal = thermal
         self.power = power

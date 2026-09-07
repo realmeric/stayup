@@ -21,7 +21,8 @@ struct StayUpApp: App {
 
         // Qualified because this app has a `Settings` of its own, the struct
         // of numbers in `Sources/Keeper`, and it wins the bare name here.
-        // S-08 puts the window's contents in.
-        SwiftUI.Settings { EmptyView() }
+        SwiftUI.Settings {
+            SettingsView().environmentObject(engine)
+        }
     }
 }

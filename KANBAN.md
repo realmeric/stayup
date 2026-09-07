@@ -33,6 +33,7 @@ Each is written with the recommended option as the default. Strike the other or 
 - S-04 · The guard that drops the flag when the app cannot · `285abab`
 - S-05 · The keeper: a state machine with the clock as an argument · `b13fc58`
 - S-06 · Sources and the engine that ticks them · `6af1b27`
+- S-07 · The menu bar item · `f7c6c8f`
 
 ## In progress
 
@@ -45,28 +46,6 @@ Each is written with the recommended option as the default. Strike the other or 
 ### Phase 2: sessions, guards, and what the agents are doing
 
 ### Phase 3: the menu
-
-#### S-07 · The menu bar item
-
-P0 · L · menu
-
-Files: new `Sources/Menu/StatusIcon.swift`, `Sources/Menu/MenuView.swift`, `Sources/Menu/Copy.swift`, edit `Sources/App/Main.swift`, `Sources/App/AppDelegate.swift`, `Tests/CopyTests.swift`. Read `docs/notes.md`, "SwiftUI menu bar".
-
-`Main.swift` becomes `MenuBarExtra { MenuView().environmentObject(engine) } label: { Image(systemName: StatusIcon.name(for: engine.status)) }` with `.menuBarExtraStyle(.menu)`, the engine created once as a `@StateObject` on the `App`. `AppDelegate` keeps the activation policy and the XCTest early return; the engine's `tick()` is called once from `applicationDidFinishLaunching` so the icon is right before the first 20 s.
-
-`StatusIcon.name(for:)`: `moon.zzz` off, `sun.max.fill` raised, `thermometer.high` paused thermal, `battery.25percent` paused battery, `bolt.slash` paused for charging, `exclamationmark.triangle` when the helper is missing. A pure function with a test per state.
-
-`Copy.swift`: the words. `Copy.statusLine(status, now:)`: `Off`, `Awake · 1 h 23 m left` for timed, `Awake · until the agents finish · last write 40 s ago` for follow (`never` before the first write), `Awake · 3 h 12 m` elapsed for indefinite, `Paused · too hot`, `Paused · battery 12%`, `Paused · not charging`, `Set up needed` when the helper is missing. Durations print as `30 m`, `1 h`, `2 h`, `5 h`, `8 h`; anything else `Xh Ym`. Tested.
-
-`MenuView`, top to bottom: the status line as a disabled `Text`; a `Divider`; when off, one `Button` per duration reading `Awake for 30 minutes`, then `Awake until the agents finish`, then `Awake indefinitely`; when active, `Stop` (and while paused, the status line already says why); a `Divider`; `Toggle` items bound to the settings for `Pause when hot`, `Pause on low battery`, `Only while charging`; `Settings…` (`SettingsLink` on macOS 14+, else `NSApp.sendAction(Selector(("showSettingsWindow:")))`); when the helper is missing, `Set up StayUp…` which calls `HelperInstaller.install()` and re-ticks, and when present, nothing (removal lives in Settings, S-08); `Launch at login` as a `Toggle` on `SMAppService.mainApp` (`register()` / `unregister()`, and read `status == .enabled`; a failure logs and the toggle reads back the real status); `Quit` calling `engine.stop(reason: .quit)` then `NSApp.terminate(nil)`. The toggles write through `engine.settings`, which S-08 persists; until then they live for the process.
-
-Accept:
-
-- [ ] `make test` green, `CopyTests` and `StatusIconTests`.
-- [ ] `manual`: the icon is `moon.zzz` at launch; `Awake for 30 minutes` turns it to `sun.max.fill` within a second and `pmset -g | grep SleepDisabled` reads 1; `Stop` turns it back and reads 0. `STAYUP_FAKE_THERMAL=critical make run`, start, the icon is `thermometer.high` and the flag reads 0. Quit with a session running: the flag reads 0 and the lease is gone.
-- [ ] `Set up StayUp…` shows only while `sudo -n -l` fails (test by temporarily `sudo rm /etc/sudoers.d/stayup`; put it back through the menu item).
-
-Commit: `Put the whole thing in the menu bar`
 
 #### S-08 · Settings, persisted, with a window for the numbers
 
