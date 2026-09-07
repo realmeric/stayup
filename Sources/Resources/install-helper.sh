@@ -14,6 +14,17 @@ set -eu
 uid=${1:?usage: install-helper.sh <uid> [remove]}
 what=${2:-install}
 
+# Digits or nothing. `#501` is sudoers' user-ID spec, but `#` followed by
+# anything else is a comment, and visudo accepts a comment happily: a rule
+# built from a bad argument would install, parse, grant nothing, and leave the
+# app saying it was set up.
+case "$uid" in
+    '' | *[!0-9]*)
+        echo "stayup: '$uid' is not a uid; nothing was installed" >&2
+        exit 1
+        ;;
+esac
+
 rule=/etc/sudoers.d/stayup
 daemon=/Library/LaunchDaemons/com.meric.stayup.reset.plist
 here=$(/usr/bin/dirname "$0")

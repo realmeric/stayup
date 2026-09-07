@@ -74,6 +74,142 @@ final class InstallScriptTests: XCTestCase {
                        "[501]\r[remove]")
     }
 
+    /// The install, rehearsed.
+    ///
+    /// The real script writes to `/etc/sudoers.d` and loads a LaunchDaemon, so
+    /// it can only ever be run once, by hand, behind a password. This runs the
+    /// same script with its four root-owned destinations pointed at a temp
+    /// directory and `launchctl` and `pmset` replaced by scripts that write
+    /// down what they were asked, which leaves the order of the steps, the
+    /// rule it writes and the plist it installs all provable.
+    func testTheInstallDoesWhatItSaysItDoes() throws {
+        let room = try rehearsalRoom()
+        let said = try rehearse(in: room, arguments: ["501"])
+
+        let rule = try String(contentsOf: room.appendingPathComponent("etc/sudoers.d/stayup"),
+                              encoding: .utf8)
+        XCTAssertTrue(rule.hasPrefix("#501 ALL=(root) NOPASSWD:"), rule)
+        XCTAssertTrue(rule.contains("disablesleep 1"), rule)
+        XCTAssertTrue(rule.contains("disablesleep 0"), rule)
+
+        let daemon = room.appendingPathComponent("Library/LaunchDaemons/com.meric.stayup.reset.plist")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: daemon.path))
+        let parsed = try PropertyListSerialization
+            .propertyList(from: try Data(contentsOf: daemon), format: nil) as? [String: Any]
+        XCTAssertEqual(parsed?["Label"] as? String, "com.meric.stayup.reset")
+
+        // Bootout first, ignoring its failure, because bootstrap of a label
+        // already loaded fails. Then the flag down, because the moment the
+        // rule exists is a good moment for it to be known down.
+        XCTAssertEqual(try calls(in: room), [
+            "launchctl bootout system/com.meric.stayup.reset",
+            "launchctl bootstrap system \(daemon.path)",
+            "pmset -a disablesleep 0"
+        ])
+        XCTAssertTrue(said.contains("flag down"), said)
+    }
+
+    /// And the way back out leaves nothing behind.
+    func testTheRemoveTakesEverythingAway() throws {
+        let room = try rehearsalRoom()
+        _ = try rehearse(in: room, arguments: ["501"])
+        try FileManager.default.removeItem(at: room.appendingPathComponent("calls"))
+        _ = try rehearse(in: room, arguments: ["501", "remove"])
+
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: room.appendingPathComponent("etc/sudoers.d/stayup").path))
+        XCTAssertFalse(FileManager.default.fileExists(
+            atPath: room.appendingPathComponent("Library/LaunchDaemons/com.meric.stayup.reset.plist").path))
+        XCTAssertEqual(try calls(in: room), [
+            "launchctl bootout system/com.meric.stayup.reset",
+            "pmset -a disablesleep 0"
+        ])
+    }
+
+    /// The user is named by uid, and only digits make a uid.
+    ///
+    /// `#501` is sudoers' own user-ID spec, but `#` followed by anything else
+    /// is a comment - and `visudo -cf` accepts a comment. A rule built from a
+    /// bad argument would install, parse, grant nothing, and leave the app
+    /// saying it was set up, so the script refuses before it writes anything.
+    func testANonNumericUserInstallsNothing() throws {
+        for bad in ["alice", "name@company.com", "501x", ""] {
+            let room = try rehearsalRoom()
+            let result = try run(in: room, arguments: [bad])
+            XCTAssertNotEqual(result.status, 0, bad)
+            // No argument at all is caught a line earlier, by the shell, with
+            // the usage message rather than this one.
+            if !bad.isEmpty {
+                XCTAssertTrue(result.err.contains("nothing was installed"), result.err)
+            }
+            XCTAssertFalse(FileManager.default.fileExists(
+                atPath: room.appendingPathComponent("etc/sudoers.d/stayup").path), bad)
+        }
+    }
+
+    /// And the app hands it a uid, not a name.
+    func testTheAppNamesTheUserByNumber() {
+        let command = HelperInstaller.command(script: "/tmp/x.sh", arguments: [])
+        XCTAssertTrue(command.contains("\\\"\(getuid())\\\""), command)
+    }
+
+    // MARK: - The rehearsal
+
+    private func rehearsalRoom() throws -> URL {
+        let room = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("install-\(UUID().uuidString)", isDirectory: true)
+        addTeardownBlock { try? FileManager.default.removeItem(at: room) }
+        for path in ["etc/sudoers.d", "Library/LaunchDaemons", "bin"] {
+            try FileManager.default.createDirectory(at: room.appendingPathComponent(path),
+                                                    withIntermediateDirectories: true)
+        }
+        for tool in ["launchctl", "pmset"] {
+            let url = room.appendingPathComponent("bin/\(tool)")
+            try Data("#!/bin/sh\necho \"\(tool) $*\" >> \"\(room.path)/calls\"\n".utf8)
+                .write(to: url)
+            try FileManager.default.setAttributes([.posixPermissions: 0o755],
+                                                  ofItemAtPath: url.path)
+        }
+        // The plist has to sit beside the script, which is what the real
+        // install does when it stages both into a temp directory.
+        try FileManager.default.copyItem(
+            at: try resource("com.meric.stayup.reset.plist"),
+            to: room.appendingPathComponent("com.meric.stayup.reset.plist"))
+
+        var text = try String(contentsOf: try resource("install-helper.sh"), encoding: .utf8)
+        text = text
+            .replacingOccurrences(of: "rule=/etc/sudoers.d/stayup",
+                                  with: "rule=\(room.path)/etc/sudoers.d/stayup")
+            .replacingOccurrences(of: "daemon=/Library/LaunchDaemons",
+                                  with: "daemon=\(room.path)/Library/LaunchDaemons")
+            // Neither of these can run without root, and neither is what is
+            // being checked here.
+            .replacingOccurrences(of: "/usr/bin/install -o root -g wheel -m 0440",
+                                  with: "/usr/bin/install -m 0644")
+            .replacingOccurrences(of: "/usr/sbin/chown root:wheel", with: "/usr/bin/true")
+            .replacingOccurrences(of: "/bin/launchctl", with: "\(room.path)/bin/launchctl")
+            .replacingOccurrences(of: "/usr/bin/pmset", with: "\(room.path)/bin/pmset")
+        try Data(text.utf8).write(to: room.appendingPathComponent("install-helper.sh"))
+        return room
+    }
+
+    private func run(in room: URL, arguments: [String]) throws
+        -> (status: Int32, out: String, err: String) {
+        try Shell.run("/bin/sh", [room.appendingPathComponent("install-helper.sh").path] + arguments)
+    }
+
+    private func rehearse(in room: URL, arguments: [String]) throws -> String {
+        let result = try run(in: room, arguments: arguments)
+        XCTAssertEqual(result.status, 0, result.err)
+        return result.out
+    }
+
+    private func calls(in room: URL) throws -> [String] {
+        try String(contentsOf: room.appendingPathComponent("calls"), encoding: .utf8)
+            .split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+    }
+
     func testThePlistIsAPlist() throws {
         let plist = try resource("com.meric.stayup.reset.plist")
         let result = try Shell.run("/usr/bin/plutil", ["-lint", plist.path])
