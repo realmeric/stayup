@@ -31,6 +31,7 @@ Each is written with the recommended option as the default. Strike the other or 
 - S-02 · Read the machine · `799e6a9`
 - S-03 · The rule that lets the app raise the flag, installed once · `640bcf2`
 - S-04 · The guard that drops the flag when the app cannot · `285abab`
+- S-05 · The keeper: a state machine with the clock as an argument · `b13fc58`
 
 ## In progress
 
@@ -41,31 +42,6 @@ Each is written with the recommended option as the default. Strike the other or 
 ### Phase 1: the flag, and every way it comes down
 
 ### Phase 2: sessions, guards, and what the agents are doing
-
-#### S-05 · The keeper: a state machine with the clock as an argument
-
-P0 · L · keeper
-
-Files: new `Sources/Keeper/Mode.swift`, `Sources/Keeper/Keeper.swift`, `Sources/Keeper/Settings.swift`, `Tests/KeeperTests.swift`, `Tests/KeeperGuardTests.swift`. Read `docs/notes.md`, "The two sleeps" for what raise and release mean.
-
-Pure code, no IOKit, no shell, no `Date()` inside. Everything that depends on the time takes `now` as an argument.
-
-`Settings.swift`: `struct Settings: Codable, Equatable` with a default beside every field: `durations: [TimeInterval]` (`[1800, 3600, 7200, 18000, 28800]`), `indefiniteCap: TimeInterval` (86400; 0 means none), `thermalPauseLevel: ThermalLevel` (`.critical`), `thermalCalm: TimeInterval` (120), `batteryFloor: Int` (15), `batteryResume: Int` (20), `onlyWhileCharging: Bool` (false), `idleTimeout: TimeInterval` (180), `followGrace: TimeInterval` (300), `followCap: TimeInterval` (28800), `watchedDirectories: [String]` (`["~/.claude/projects", "~/.codex/sessions"]`), `notifications: Bool` (true), `warnBeforeEnd: TimeInterval` (300). `static let defaults = Settings()`.
-
-`Mode.swift`: `enum Mode: Equatable { case off; case timed(until: Date); case follow(started: Date); case indefinite(started: Date) }`.
-
-`Keeper.swift`: `struct Inputs { now: Date; thermal: ThermalLevel; power: PowerReading; lidClosed: Bool; lastAgentWrite: Date? }`, `enum PauseReason { thermal, battery, charging }`, `enum EndReason { timer, agentsIdle, cap, stopped, quit }`, `enum Notice: Equatable { paused(PauseReason), resumed, ended(EndReason), warning(TimeInterval), thermalWarning }`, `enum Effect: Equatable { raise, release(sleepNow: Bool), notify(Notice) }`. `struct Keeper` holds `mode`, `paused: PauseReason?`, `raised: Bool`, `calmSince: Date?`, `warned: Bool`, and `settings`. Three mutating functions, each returning `[Effect]`: `start(_ mode: Mode, inputs:)`, `stop(reason:, inputs:)`, `tick(inputs:)`.
-
-The rules, in the order `tick` applies them. First, is the session over: `.timed` when `now >= until`, reason `.timer`; `.follow` when `now - started > followGrace` and (`lastAgentWrite` is nil or `now - lastAgentWrite > idleTimeout`), reason `.agentsIdle`, or `now - started > followCap`, reason `.cap`; `.indefinite` when the cap is not 0 and `now - started > indefiniteCap`, reason `.cap`. Over means mode becomes `.off`, and if `raised`, `release(sleepNow: lidClosed)` then `notify(.ended(reason))`. Second, the guards, only while a mode is active: `onlyWhileCharging && !power.onAC` pauses with `.charging`; `thermal >= thermalPauseLevel` pauses with `.thermal`; `!power.onAC && power.percent < batteryFloor` pauses with `.battery`. Entering a pause that was not already the pause releases the flag (`sleepNow: lidClosed`) and notifies `.paused(reason)`. A pause lifts when its own condition has cleared: `.charging` when `onAC`; `.battery` when `onAC || percent >= batteryResume`; `.thermal` when `thermal <= .fair` continuously for `thermalCalm`, which `calmSince` tracks (set when the level first reads `.fair` or lower, cleared whenever it reads higher). Lifting notifies `.resumed`. Third, the flag: active and not paused and not raised means `raise`; anything else and raised means release. Fourth, the warning: `.timed` with `until - now <= warnBeforeEnd`, not yet `warned`, and not paused notifies `.warning(until - now)` once. A `thermal == .serious` reading while the pause level is `.critical` notifies `.thermalWarning` once per session. `stop` releases if raised, with `sleepNow: false` when the reason is `.stopped` (you clicked it; you are at the keyboard) and `lidClosed` when it is `.quit`.
-
-`KeeperTests`, each with a fixed `t0` and `Settings.defaults`: start timed 30 min raises; tick at 29 min does nothing but at 25 min sends `.warning(300)` once; tick at 30 min releases with `sleepNow` equal to the lid input and notifies `.ended(.timer)`; follow at t0 with no writes stays raised until 5 min then ends `.agentsIdle`; follow with a write at t0+4m stays alive at t0+6m and ends at t0+7m01s; indefinite ends at 24 h and not at 23 h 59 m, and never with a cap of 0; stop after start releases without sleep. `KeeperGuardTests`: critical pauses with `sleepNow: true` when the lid is closed and the pause does not repeat on the next tick; fair for 119 s does not resume and 120 s does; serious under the default level warns once and does not pause, and pauses under `.serious` as the level; battery 14% on battery pauses, 19% does not resume, 20% does, AC resumes at any percent; `onlyWhileCharging` pauses on battery at 90%.
-
-Accept:
-
-- [ ] `make test` green, the two files above with at least the listed cases.
-- [ ] `Keeper.swift` imports only `Foundation`, and `grep -n "Date()" Sources/Keeper` finds nothing.
-
-Commit: `Decide when the flag is up with the clock handed in`
 
 #### S-06 · Sources and the engine that ticks them
 
