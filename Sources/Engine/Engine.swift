@@ -132,7 +132,10 @@ final class Engine: ObservableObject {
         }
         status.error = nil
         notifier.prepare()
-        apply(keeper.start(mode, inputs: gather()))
+        // Gathered once: the effects and the lease should be written against
+        // the same reading the decision was made from.
+        let inputs = gather()
+        apply(keeper.start(mode, inputs: inputs), inputs: inputs)
     }
 
     func stop(reason: EndReason = .stopped) {

@@ -22,7 +22,10 @@ struct MenuView: View {
         if engine.status.mode.isActive {
             Button(Copy.stop) { engine.stop() }
         } else {
-            ForEach(engine.settings.durations, id: \.self) { seconds in
+            // By position rather than by value: two rows set to the same
+            // number are a thing the settings window allows, and a duplicated
+            // id would collapse them into one item.
+            ForEach(Array(engine.settings.durations.enumerated()), id: \.offset) { _, seconds in
                 Button(Copy.awakeFor(seconds)) {
                     engine.start(.timed(until: Date().addingTimeInterval(seconds)))
                 }

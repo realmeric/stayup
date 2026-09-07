@@ -37,10 +37,33 @@ Each is written with the recommended option as the default. Strike the other or 
 - S-08 · Settings, persisted, with a window for the numbers · `84d2bf8`
 - S-09 · Notifications that say what happened and what happens next · `939d626`
 - S-10 · A real app in /Applications, and launch at login · `6466834`
+- S-12 · README, and the way out · `936ff94`
 
 ## In progress
 
-(empty; one card at a time)
+S-11 only. Everything above it is committed and the gate is green at 134 tests.
+
+## Left for you
+
+Every card in Done is done except its `manual` and `admin` boxes, which need a
+password, a lid, or a reboot. In order:
+
+1. `Set up StayUp…` in the menu, once. Type your password. Then
+   `sudo -n -l | grep disablesleep` shows the NOPASSWD entry with `-a`,
+   `ls -l /etc/sudoers.d/stayup` reads `-r--r-----  root  wheel`,
+   `sudo launchctl print system/com.meric.stayup.reset` finds the daemon, and
+   `launchctl print gui/501/com.meric.stayup.guard` shows `interval = 60`.
+   That closes S-03 and S-04.
+2. Start a 30 minute session. The icon turns to `sun.max.fill` and
+   `pmset -g | grep SleepDisabled` reads 1 within a second; `Stop` returns it
+   to 0 and removes `~/Library/Application Support/StayUp/lease`. That closes
+   S-06 and S-07.
+3. `STAYUP_FAKE_POWER=battery:80` from a terminal against
+   `/Applications/StayUp.app/Contents/MacOS/StayUp`, start, and the menu reads
+   `Paused · battery 80%`; the first Start also asks for notification
+   permission. That closes S-08 and S-09.
+4. `Launch at login` on, then log out and in. That closes S-10.
+5. S-11 whole, which is the lid in your hands.
 
 ## Ready
 
@@ -72,20 +95,6 @@ Accept:
 - [ ] `docs/notes.md` corrected wherever the machine disagreed, in the same commit.
 
 Commit: one per fix, or none
-
-#### S-12 · README, and the way out
-
-P2 · S · repo
-
-Files: edit `README.md`.
-
-Second person, short. What it does in one paragraph; why `caffeinate` and the apps built on it cannot do this, in one paragraph, with the two log lines from 2026-09-06 23:07:51 and 23:08:02; what it changes on the Mac, exactly (`/etc/sudoers.d/stayup`, the two launchd jobs, the lease file) and how to remove all of it (`Settings › Remove…`, or the four commands by hand); the guards and their defaults; the honest limit that a thermal pause with the lid closed means the Mac sleeps until you open it, and that the app trusts `ProcessInfo.thermalState` rather than a sensor. Build: `make test`, `make run`, `make install`.
-
-Accept:
-
-- [ ] The removal instructions, followed by hand on this Mac, leave `sudo -n -l` failing, both `launchctl print` calls failing, and no lease; then `make install` and set up again.
-
-Commit: `Say what StayUp does to the Mac and how to undo it`
 
 ## Backlog
 
