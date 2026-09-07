@@ -32,6 +32,7 @@ Each is written with the recommended option as the default. Strike the other or 
 - S-03 · The rule that lets the app raise the flag, installed once · `640bcf2`
 - S-04 · The guard that drops the flag when the app cannot · `285abab`
 - S-05 · The keeper: a state machine with the clock as an argument · `b13fc58`
+- S-06 · Sources and the engine that ticks them · `6af1b27`
 
 ## In progress
 
@@ -42,28 +43,6 @@ Each is written with the recommended option as the default. Strike the other or 
 ### Phase 1: the flag, and every way it comes down
 
 ### Phase 2: sessions, guards, and what the agents are doing
-
-#### S-06 · Sources and the engine that ticks them
-
-P0 · L · engine
-
-Files: new `Sources/Sources/ThermalSource.swift`, `Sources/Sources/PowerSource.swift`, `Sources/Sources/LidSource.swift`, `Sources/Sources/AgentActivity.swift`, `Sources/Sources/FakeSources.swift`, `Sources/Engine/Engine.swift`, `Sources/Engine/Notifier.swift` (a protocol and a logging default; S-09 fills it), `Tests/AgentActivityTests.swift`, `Tests/EngineTests.swift`. Read `docs/notes.md`, "Claude Code's files" and "Reading the machine".
-
-Protocols, one per input, each with a `read()` and an `onChange: (() -> Void)?` the engine sets. `ThermalSource` reads `Thermal.read()` and observes `ProcessInfo.thermalStateDidChangeNotification` through `NotificationCenter`. `PowerSource` reads `Power.read()` and registers `IOPSNotificationCreateRunLoopSource` on the main run loop, the C callback bouncing to `onChange` through an `Unmanaged` context; alternatively poll it on the tick, which is fine at 20 s, and say which was done. `LidSource` reads `Lid.isClosed()` on the tick; there is no cheap notification for it and the tick is enough. `AgentActivity` reads `lastWrite() -> Date?`: for each directory in `settings.watchedDirectories`, expanded with `NSString.expandingTildeInPath`, a `FileManager.enumerator(at:includingPropertiesForKeys: [.contentModificationDateKey], options: [.skipsHiddenFiles])` over every `.jsonl` file, the newest `contentModificationDate` wins. 300 files is a few milliseconds of `stat`; log the count and the elapsed time at debug on each read. A directory that does not exist is skipped silently.
-
-`FakeSources.swift`, in the app target so the manual pass can use them: when `STAYUP_FAKE_THERMAL` is set to `nominal`, `fair`, `serious` or `critical`, `ThermalSource` returns it; `STAYUP_FAKE_POWER` as `ac` or `battery:<percent>`; `STAYUP_FAKE_LID` as `open` or `closed`; `STAYUP_FAKE_AGENT` as `busy` or `idle`. Each is read on every tick so the value can be changed by relaunching, which is all the manual pass needs.
-
-`Engine.swift`: `@MainActor final class Engine: ObservableObject`. Owns a `Keeper`, the four sources, a `FlagWriting`, a `Notifying`, the `Settings`, and a `Timer` at 20 s on the main run loop. `@Published private(set) var status: Status`, `struct Status { mode: Mode; paused: PauseReason?; raised: Bool; endsAt: Date?; helper: HelperStatus; thermal: ThermalLevel; power: PowerReading; lidClosed: Bool; lastAgentWrite: Date? }`. `func start(_ mode: Mode)`, `func stop()`, `func tick()`; `start` refuses with a logged reason when `helper == .missing`. `tick` gathers `Inputs` with `now: Date()` (the one place the clock is read), calls `keeper.tick`, then applies effects in order: `raise` calls the writer and on success `Lease.renew(until: now + 120)`; `release` calls the writer, `Lease.clear()`, and when `sleepNow` runs `Shell.run("/usr/bin/pmset", ["sleepnow"])`; `notify` hands the notice to the notifier. A writer error puts the keeper back to `.off` via `stop(reason: .stopped)` and sets `status.error`. While `raised`, every tick also renews the lease, so the lease stays two minutes ahead of a guard that runs every one. Source `onChange` calls `tick()` immediately. `init` takes every dependency with the real one as the default, so `EngineTests` builds it with the fakes, a `FakeFlagWriter`, a recording notifier, and a temp lease directory, and drives `tick()` by hand.
-
-`EngineTests`: start timed, tick, the fake writer saw `raise` and the lease file exists with an expiry about 120 s ahead; simulate the writer throwing, the status carries the error and the mode is off; a `critical` fake thermal on the next tick makes the writer see `release`, the lease is gone, and the notifier recorded `.paused(.thermal)`.
-
-Accept:
-
-- [ ] `make test` green, `AgentActivityTests` (a temp directory with two `.jsonl` files and a `.txt`, the newer `.jsonl` wins; an empty directory reads nil; a missing directory reads nil) and `EngineTests`.
-- [ ] `manual`: `STAYUP_DRY_RUN=1 STAYUP_FAKE_AGENT=busy make run` with a temporary `STAYUP_START=follow` hook (S-07 removes it) logs `raise` under `flag` and renews the lease every 20 s; relaunch with `STAYUP_FAKE_AGENT=idle` and after the 5 min grace the log shows `release` and `ended agentsIdle`.
-- [ ] Without `STAYUP_DRY_RUN`, timed 30 min: `pmset -g | grep SleepDisabled` is 1 within 20 s of start, the lease file reads two minutes ahead, and `stop()` returns it to 0 and removes the lease.
-
-Commit: `Tick the machine into the keeper and the keeper into the flag`
 
 ### Phase 3: the menu
 
