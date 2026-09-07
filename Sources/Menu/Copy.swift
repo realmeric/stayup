@@ -126,6 +126,44 @@ enum Copy {
         and the reset that clears one at boot.
         """
 
+    // MARK: - Notifications
+
+    /// What a notice says, and what to do about it.
+    ///
+    /// Every one of these ends with the thing the reader wants to know: what
+    /// the Mac will do now, or what would change it.
+    static func notice(_ notice: Notice, settings: Settings = .defaults) -> (title: String, body: String) {
+        switch notice {
+        case .paused(.thermal):
+            // The honest limit, said rather than hidden: a pause releases the
+            // flag, and with the lid closed that means the Mac sleeps and the
+            // app sleeps with it, so nothing resumes until the lid opens.
+            return ("Paused: too hot",
+                    "The Mac will sleep if the lid is closed. Open it when it has cooled and StayUp resumes.")
+        case .paused(.battery):
+            return ("Paused: battery low", "Plug in to resume.")
+        case .paused(.charging):
+            return ("Paused: not charging", "Only while charging is on. Plug in to resume.")
+        case .resumed:
+            return ("Awake again", "")
+        case .ended(.timer):
+            return ("Time is up", "The Mac can sleep now.")
+        case .ended(.agentsIdle):
+            return ("The agents finished",
+                    "No transcript has been written for \(spelled(settings.idleTimeout)). The Mac can sleep now.")
+        case .ended(.cap(let cap)):
+            return ("Session cap reached",
+                    "StayUp has been on for \(spelled(cap)) and stopped itself.")
+        case .ended(.stopped), .ended(.quit):
+            // Neither is ever delivered: you did it, so you know.
+            return ("", "")
+        case .warning(let left):
+            return ("\(spelled(left)) left", "Start another session from the menu to keep going.")
+        case .thermalWarning:
+            return ("Getting hot", "Still awake. StayUp pauses at critical; change that in Settings.")
+        }
+    }
+
     /// 0 hours is not "0 h"; it is the setting this app exists because of.
     static func cap(_ seconds: TimeInterval) -> String {
         seconds == 0 ? "no cap" : duration(seconds)

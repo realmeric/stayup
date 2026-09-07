@@ -61,7 +61,7 @@ final class Engine: ObservableObject {
          lid: LidSource = MachineLidSource(),
          agents: AgentSource = AgentActivity(),
          writer: FlagWriting? = nil,
-         notifier: Notifying = LoggingNotifier(),
+         notifier: Notifying? = nil,
          helperStatus: @escaping (Bool) -> HelperStatus = { HelperInstaller.status(wanting: $0) },
          leaseBase: URL = Lease.directory,
          interval: TimeInterval = 20) {
@@ -74,7 +74,7 @@ final class Engine: ObservableObject {
         self.lid = lid
         self.agents = agents
         self.writer = writer ?? Engine.defaultWriter()
-        self.notifier = notifier
+        self.notifier = notifier ?? LoggingNotifier()
         self.helperStatus = helperStatus
         self.leaseBase = leaseBase
         self.interval = interval
@@ -82,6 +82,11 @@ final class Engine: ObservableObject {
 
         let wake: () -> Void = { [weak self] in
             Task { @MainActor in self?.tick() }
+        }
+        if notifier == nil {
+            // After the stored properties, because it reads the settings back
+            // out of the engine each time it has something to say.
+            self.notifier = UserNotifier(settings: { [weak self] in self?.settings ?? .defaults })
         }
         self.thermal.onChange = wake
         self.power.onChange = wake
@@ -126,6 +131,7 @@ final class Engine: ObservableObject {
             return
         }
         status.error = nil
+        notifier.prepare()
         apply(keeper.start(mode, inputs: gather()))
     }
 

@@ -101,7 +101,7 @@ final class KeeperTests: XCTestCase {
         XCTAssertEqual(keeper.tick(inputs: at(28800, lastAgentWrite: busy)), [])
         busy = t0.addingTimeInterval(28801)
         XCTAssertEqual(keeper.tick(inputs: at(28801, lastAgentWrite: busy)),
-                       [.release(sleepNow: false), .notify(.ended(.cap))])
+                       [.release(sleepNow: false), .notify(.ended(.cap(28800)))])
     }
 
     // MARK: - Indefinite
@@ -110,7 +110,7 @@ final class KeeperTests: XCTestCase {
         _ = keeper.start(.indefinite(started: t0), inputs: at(0))
         XCTAssertEqual(keeper.tick(inputs: at(86340)), [])
         XCTAssertEqual(keeper.tick(inputs: at(86401)),
-                       [.release(sleepNow: false), .notify(.ended(.cap))])
+                       [.release(sleepNow: false), .notify(.ended(.cap(86400)))])
     }
 
     /// A cap of 0 is the setting this app exists because of, so it is spelled

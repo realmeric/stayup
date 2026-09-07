@@ -18,7 +18,9 @@ enum PauseReason: Equatable {
 enum EndReason: Equatable {
     case timer
     case agentsIdle
-    case cap
+    /// Carrying the cap it hit, because Follow's is 8 hours and Indefinite's
+    /// is 24 and the notification says which.
+    case cap(TimeInterval)
     case stopped
     case quit
 }
@@ -122,13 +124,15 @@ struct Keeper {
             return inputs.now >= until ? .timer : nil
         case .follow(let started):
             let running = inputs.now.timeIntervalSince(started)
-            if running > settings.followCap { return .cap }
+            if running > settings.followCap { return .cap(settings.followCap) }
             guard running > settings.followGrace else { return nil }
             guard let last = inputs.lastAgentWrite else { return .agentsIdle }
             return inputs.now.timeIntervalSince(last) > settings.idleTimeout ? .agentsIdle : nil
         case .indefinite(let started):
             guard settings.indefiniteCap != 0 else { return nil }
-            return inputs.now.timeIntervalSince(started) > settings.indefiniteCap ? .cap : nil
+            return inputs.now.timeIntervalSince(started) > settings.indefiniteCap
+                ? .cap(settings.indefiniteCap)
+                : nil
         }
     }
 

@@ -34,6 +34,7 @@ Each is written with the recommended option as the default. Strike the other or 
 - S-05 · The keeper: a state machine with the clock as an argument · `b13fc58`
 - S-06 · Sources and the engine that ticks them · `6af1b27`
 - S-07 · The menu bar item · `f7c6c8f`
+- S-08 · Settings, persisted, with a window for the numbers · `84d2bf8`
 
 ## In progress
 
@@ -46,25 +47,6 @@ Each is written with the recommended option as the default. Strike the other or 
 ### Phase 2: sessions, guards, and what the agents are doing
 
 ### Phase 3: the menu
-
-#### S-08 · Settings, persisted, with a window for the numbers
-
-P1 · M · settings
-
-Files: new `Sources/Settings/SettingsStore.swift`, `Sources/Settings/SettingsView.swift`, `Tests/SettingsStoreTests.swift`, `Tests/SettingsRoomTests.swift`, edit `Sources/Engine/Engine.swift`, `Sources/App/Main.swift`.
-
-`SettingsStore`: one `UserDefaults` key, `settings`, holding the JSON of `Settings`; `load()` returns defaults when the key is missing or fails to decode (and logs the failure), `save(_:)` encodes. Takes a `UserDefaults` in `init` so tests use `UserDefaults(suiteName:)` and `removePersistentDomain` in `tearDown`. The engine loads at init and saves on every change through a `settings` property with a `didSet`.
-
-`SettingsView` under a `Settings { SettingsView().environmentObject(engine) }` scene added beside the `MenuBarExtra`. Four groups in a `Form`. Sessions: the indefinite cap as a `Stepper` in hours (0 reads `no cap`), the warning as minutes. Agents: the idle timeout in minutes, the grace, the cap in hours, and the watched directories as a list of paths with add and remove. Guards: a `Picker` for the thermal level (`Critical`, `Serious`), the calm time in seconds, the battery floor and resume as steppers (resume clamps to floor + 1 or more), and the only-while-charging toggle. Helper: the helper status as a line (`Installed` / `Not installed`), `Install…` or `Remove…`, and the guard agent's status beside it. Every control binds to `engine.settings` fields.
-
-`SettingsRoomTests`, as in Kullanym Notch: uses `Mirror` to walk the fields of `Settings` and fails for any field not in a hand-kept list of placed fields, so a new setting cannot be added without a control.
-
-Accept:
-
-- [ ] `make test` green, `SettingsStoreTests` (round trip, missing reads defaults, garbage reads defaults) and `SettingsRoomTests`.
-- [ ] `manual`: change the battery floor to 90, quit, relaunch, it reads 90; `STAYUP_FAKE_POWER=battery:80 make run`, start a session, it pauses at once with `Paused · battery 80%`. Put the floor back to 15.
-
-Commit: `Keep every choice, and give the numbers a window`
 
 #### S-09 · Notifications that say what happened and what happens next
 
