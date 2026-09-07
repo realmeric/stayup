@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 import XCTest
 @testable import StayUp
@@ -10,9 +11,7 @@ import XCTest
 /// pair that pauses and resumes forever.
 @MainActor
 final class SettingsRoomTests: XCTestCase {
-    private enum Room: String {
-        case sessions, agents, guards, helper
-    }
+    private typealias Room = SettingsRoom
 
     /// Every field of the settings has a control in some room.
     ///
@@ -26,7 +25,13 @@ final class SettingsRoomTests: XCTestCase {
             "durations": .sessions,
             "indefiniteCap": .sessions,
             "warnBeforeEnd": .sessions,
-            "notifications": .sessions,
+            "notifications": .general,
+            "quickStart": .general,
+            "hotkeyEnabled": .general,
+            "hotkey": .general,
+            "iconStyle": .appearance,
+            "awakeColor": .appearance,
+            "idleColor": .appearance,
             "idleTimeout": .agents,
             "followGrace": .agents,
             "followCap": .agents,
@@ -54,13 +59,14 @@ final class SettingsRoomTests: XCTestCase {
                       "these settings no longer exist: \(gone.sorted().joined(separator: ", "))")
     }
 
-    /// Every room is named, because the tab bar is the only way to reach three
-    /// of the four.
-    func testEveryRoomIsNamed() {
-        XCTAssertFalse(Copy.roomSessions.isEmpty)
-        XCTAssertFalse(Copy.roomAgents.isEmpty)
-        XCTAssertFalse(Copy.roomGuards.isEmpty)
-        XCTAssertFalse(Copy.roomHelper.isEmpty)
+    /// Every room is named and has a mark, because the sidebar is the only way
+    /// to reach five of the six.
+    func testEveryRoomIsNamedAndMarked() {
+        for room in SettingsRoom.allCases {
+            XCTAssertFalse(room.title.isEmpty, room.rawValue)
+            XCTAssertNotNil(NSImage(systemSymbolName: room.symbol, accessibilityDescription: nil),
+                            "\(room.rawValue) has no symbol called \(room.symbol)")
+        }
     }
 
     /// Every label in the window is a real sentence and no two rows say the
@@ -94,5 +100,37 @@ final class SettingsRoomTests: XCTestCase {
     func testACapOfZeroReadsAsNoCap() {
         XCTAssertEqual(Copy.cap(0), "no cap")
         XCTAssertEqual(Copy.cap(86400), "24 h")
+    }
+}
+
+/// The settings window itself, which is a window rather than a SwiftUI scene.
+@MainActor
+final class SettingsWindowTests: XCTestCase {
+    /// It opens on the room it was asked for, and asking again brings the same
+    /// window forward rather than building a second one - which would throw
+    /// away where it was put and which room was being read.
+    func testItBuildsOneWindowAndReusesIt() {
+        var built: [SettingsRoom] = []
+        let settings = SettingsWindow { room in
+            built.append(room)
+            return AnyView(Text(room.title))
+        }
+        settings.show(room: .helper)
+        settings.show(room: .general)
+        XCTAssertEqual(built, [.helper])
+    }
+
+    /// Every room can be named from the string a launch or a menu hands over.
+    func testEveryRoomRoundTripsThroughItsName() {
+        for room in SettingsRoom.allCases {
+            XCTAssertEqual(SettingsRoom(rawValue: room.rawValue), room)
+        }
+    }
+
+    /// The window is big enough for the longest room without a scroll bar
+    /// being the first thing you see.
+    func testItHasARoomToBeOpenedAt() {
+        XCTAssertGreaterThanOrEqual(SettingsView.width, 600)
+        XCTAssertGreaterThanOrEqual(SettingsView.height, 480)
     }
 }

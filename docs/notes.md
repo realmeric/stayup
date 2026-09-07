@@ -70,9 +70,35 @@ Codex: `~/.codex/sessions/**/*.jsonl`, the same shape of signal.
 
 Claude Desktop runs its Claude Code sessions from the app, so the transcripts are the only footprint; there is no `claude` process to watch.
 
+## The menu bar item
+
+`MenuBarExtra` cannot tell a left click from a right one. Both open the content, and there is no gesture left over, so an icon whose left button is meant to *do* something has to be an `NSStatusItem` built by hand. The button takes both buttons through one action with `sendAction(on: [.leftMouseUp, .rightMouseUp])` and asks `NSApp.currentEvent` which arrived; control-click reads as a right click, because macOS has said so since before there were two buttons.
+
+The mask matters and is not symmetric. `sendAction(on: [.leftMouseUp, .rightMouseUp])` is what everyone writes and the right click never reaches the action at all: measured 2026-09-07, no action, no log line, nothing. `[.leftMouseUp, .rightMouseDown]` delivers both. `NSApp.currentEvent` inside the action can then read as either `.rightMouseDown` or `.rightMouseUp` depending on how far AppKit has got, so the gesture test accepts both.
+
+The menu is assigned for the length of one click and taken away again: an `NSStatusItem` with `menu` set permanently stops sending its action altogether, and the left click quietly stops working. `item.menu = menu; button.performClick(nil); item.menu = nil`.
+
+A menu on screen is invisible to screen capture. `screencapture`, and the screenshot tools built on the same API, return the desktop without it, so an open menu looks exactly like a menu that never opened. Two hours went into a bug that was not there. Prove a menu by driving it - type-select a letter, press Return, watch the flag - or by `menuNeedsUpdate` logging the item count.
+
+The icon is not a template image. A template is repainted by the menu bar in black or white and a chosen colour would never survive it, so the symbol is drawn into an `NSImage` and filled `.sourceAtop` with the colour, `isTemplate = false`. The cost is that macOS no longer inverts it for a light menu bar, which is why the resting colour ships white and the awake colour is a hue that reads on both.
+
+`LSUIElement: true` in `Info.plist` keeps the app off the Dock; `NSApp.setActivationPolicy(.accessory)` in the delegate does the same at runtime and is kept so the behaviour does not depend on the plist alone. It also keeps the app out of the list computer-use can drive, which is why the click routing is a pure function with a test rather than something a robot proves by clicking.
+
+The settings window is an `NSWindow` around an `NSHostingView`, not a SwiftUI `Settings` scene. `NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)` is the documented-by-folklore way to open one and it answers `true`; measured on 2026-09-07, with `Settings` as the app's only scene it then made no window at all - not immediately, not two seconds later, and not with the activation policy raised to `.regular` first. `NSApp.windows` held only `NSStatusBarWindow` throughout. So the app has no SwiftUI scene and no `App` at all: `@main` is a plain `NSApplication.shared.run()`.
+
+A window from an accessory app opens behind whatever you were working in. `makeKeyAndOrderFront` plus `activate` is not enough; `orderFrontRegardless` is the part that does not ask.
+
+## The global shortcut
+
+Carbon's `RegisterEventHotKey` rather than `NSEvent.addGlobalMonitorForEvents`. The monitor needs Accessibility permission and sees every keystroke on the Mac, which is an enormous thing to ask for one shortcut; Carbon asks for nothing and only ever hears the combination it registered. The handler is installed once on `GetEventDispatcherTarget()` and fires on the main thread.
+
+The combination is stored as Carbon's own numbers (`cmdKey`, `optionKey`, `controlKey`, `shiftKey`, and a virtual key code) rather than `NSEvent.ModifierFlags`, because Carbon is what registers it and a translation kept in a settings file is one that can go stale. A key code is a position on the keyboard, not a letter, so the recorder asks the current layout what the key produces through `UCKeyTranslate`: on a Turkish-Q keyboard a table baked into the app would name the wrong letters.
+
+`RegisterEventHotKey` returns a non-zero status when something else already owns the combination, which is the only failure worth showing: the settings window says so rather than leaving a dead switch. The recorder unregisters the current shortcut while it is recording, or pressing the existing one fires the app instead of being caught.
+
 ## SwiftUI menu bar
 
-`MenuBarExtra(content:label:)` with `.menuBarExtraStyle(.menu)` renders a real `NSMenu`: `Button`, `Toggle`, `Divider`, disabled `Text` all become items, and the label's `Image(systemName:)` is the icon. The label view is re-evaluated when the `@Published` it reads changes, so an icon that follows state is a function of the status, nothing more. `LSUIElement: true` in `Info.plist` keeps the app off the Dock; `NSApp.setActivationPolicy(.accessory)` in the delegate does the same at runtime and is kept so the behaviour does not depend on the plist alone. The `Settings` scene opens through `SettingsLink` on macOS 14 and later.
+`MenuBarExtra(content:label:)` with `.menuBarExtraStyle(.menu)` renders a real `NSMenu` and was what this app used until the left button had to mean something. Kept here because it is the right answer for an icon that only ever opens a list, and because `SettingsLink` works inside it where the AppKit menu has to send `showSettingsWindow:` by name.
 
 ## Building and testing
 

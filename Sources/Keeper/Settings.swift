@@ -33,5 +33,31 @@ struct Settings: Codable, Equatable {
     var notifications: Bool = true
     var warnBeforeEnd: TimeInterval = 300
 
+    // MARK: What one click does
+
+    /// What a left click on the icon, and the hotkey, start.
+    ///
+    /// Indefinite by default, because a click on a coffee cup means "keep it
+    /// awake until I say otherwise" and the cap is what keeps that honest.
+    var quickStart: QuickStart = .indefinite
+    var hotkeyEnabled: Bool = true
+    /// Control-Option-Command-B. Registered through Carbon, which needs no
+    /// Accessibility permission; a global `NSEvent` monitor would.
+    var hotkey: Hotkey = .default
+
+    // MARK: How it looks
+
+    var iconStyle: IconStyle = .coffee
+    var awakeColor: String = Palette.defaultAwake
+    var idleColor: String = Palette.defaultIdle
+
     static let defaults = Settings()
+}
+
+/// What one click starts. The duration is carried even when the choice is not
+/// timed, so switching to Timed and back does not forget the number.
+enum QuickStart: Codable, Equatable, Hashable {
+    case timed(TimeInterval)
+    case follow
+    case indefinite
 }

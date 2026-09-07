@@ -90,11 +90,6 @@ enum Copy {
 
     // MARK: - The settings window
 
-    static let roomSessions = "Sessions"
-    static let roomAgents = "Agents"
-    static let roomGuards = "Guards"
-    static let roomHelper = "Helper"
-
     static let indefiniteCap = "Stop indefinite sessions after"
     static let warnBeforeEnd = "Warn before the end"
     static let notifications = "Notifications"
@@ -129,6 +124,37 @@ enum Copy {
         away the rule, the guard that clears a forgotten flag every minute, \
         and the reset that clears one at boot.
         """
+
+    // MARK: - General and appearance
+
+    static let quickStartSection = "One click"
+    static let quickStart = "Starts"
+    static let quickStartExplanation =
+        "A left click on the icon, and the shortcut, start this. A right click opens the menu."
+    static let quickTimed = "A timed session"
+    static let quickFollow = "Until the agents finish"
+    static let quickIndefinite = "Indefinitely"
+    static let quickDuration = "For"
+    static let shortcut = "Shortcut"
+    static let shortcutEnabled = "Use a global shortcut"
+    static let shortcutExplanation =
+        "Works from any app. Registered with the system rather than by watching the keyboard, "
+        + "so StayUp never asks for Accessibility access."
+    static let shortcutTaken =
+        "Something else on this Mac already owns that combination. Pick another."
+
+    static let menuBarSection = "Menu bar"
+    static let iconStyle = "Icon"
+    static let awakeColor = "Awake"
+    static let idleColor = "Resting"
+    static let appearanceExplanation =
+        "Filled while a session holds the flag, outlined when it does not, so the state reads "
+        + "without the colour. A held session is the awake colour, dimmed."
+    static let restoreColors = "Use the default colours"
+    static let preview = "Preview"
+    static let previewOff = "Off"
+    static let previewAwake = "Awake"
+    static let previewPaused = "Paused"
 
     // MARK: - Notifications
 

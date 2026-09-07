@@ -33,6 +33,10 @@ final class Engine: ObservableObject {
             keeper.settings = settings
             (agents as? AgentActivity)?.directories = settings.watchedDirectories
             store.save(settings)
+            if settings.hotkey != oldValue.hotkey
+                || settings.hotkeyEnabled != oldValue.hotkeyEnabled {
+                adoptHotkey()
+            }
         }
     }
 
@@ -100,6 +104,12 @@ final class Engine: ObservableObject {
             : SudoFlagWriter()
     }
 
+    /// Hand the current shortcut to the one thing that registers it. Called at
+    /// launch and whenever the choice changes.
+    func adoptHotkey() {
+        HotkeyCenter.shared.adopt(settings.hotkey, enabled: settings.hotkeyEnabled)
+    }
+
     func use(_ notifier: Notifying) {
         self.notifier = notifier
     }
@@ -136,6 +146,28 @@ final class Engine: ObservableObject {
         // the same reading the decision was made from.
         let inputs = gather()
         apply(keeper.start(mode, inputs: inputs), inputs: inputs)
+    }
+
+    /// What a left click on the icon and the shortcut both do: stop a session
+    /// that is running, or start the one the settings call the quick start.
+    ///
+    /// One gesture for both directions on purpose. A switch you flip is a
+    /// switch you can use without looking at it, which is the whole argument
+    /// for putting it on the left button.
+    func toggleQuickStart() {
+        if keeper.mode.isActive {
+            stop()
+            return
+        }
+        let now = Date()
+        switch settings.quickStart {
+        case .timed(let seconds):
+            start(.timed(until: now.addingTimeInterval(seconds)))
+        case .follow:
+            start(.follow(started: now))
+        case .indefinite:
+            start(.indefinite(started: now))
+        }
     }
 
     func stop(reason: EndReason = .stopped) {

@@ -211,3 +211,89 @@ final class EngineTests: XCTestCase {
         XCTAssertNil(lease)
     }
 }
+
+/// One click, and what it starts.
+@MainActor
+final class QuickStartTests: XCTestCase {
+    private var room: URL!
+    private var suite: String!
+    private var writer: FakeFlagWriter!
+
+    override func setUpWithError() throws {
+        try super.setUpWithError()
+        suite = "quick-\(UUID().uuidString)"
+        room = URL(fileURLWithPath: NSTemporaryDirectory()).appendingPathComponent(suite)
+        writer = FakeFlagWriter()
+    }
+
+    override func tearDown() {
+        UserDefaults().removePersistentDomain(forName: suite)
+        try? FileManager.default.removeItem(at: room)
+        super.tearDown()
+    }
+
+    private func engine(_ quick: QuickStart) -> Engine {
+        var settings = Settings.defaults
+        settings.quickStart = quick
+        return Engine(store: SettingsStore(defaults: UserDefaults(suiteName: suite)!),
+                      settings: settings,
+                      thermal: FakeThermalSource(),
+                      power: FakePowerSource(),
+                      lid: FakeLidSource(),
+                      agents: FakeAgentSource(),
+                      writer: writer,
+                      notifier: RecordingNotifier(),
+                      helperStatus: { _ in .installed },
+                      leaseBase: room,
+                      interval: 3600)
+    }
+
+    /// Indefinite by default: a click on a coffee cup means keep it awake until
+    /// I say otherwise, and the 24 hour cap is what keeps that honest.
+    func testTheDefaultIsIndefinite() {
+        XCTAssertEqual(Settings.defaults.quickStart, .indefinite)
+    }
+
+    func testOneClickStartsAndTheNextStops() {
+        let engine = engine(.indefinite)
+        engine.toggleQuickStart()
+        XCTAssertTrue(engine.status.raised)
+        if case .indefinite = engine.status.mode {} else { XCTFail("not indefinite") }
+        engine.toggleQuickStart()
+        XCTAssertFalse(engine.status.raised)
+        XCTAssertEqual(engine.status.mode, .off)
+        XCTAssertEqual(writer.raised, [true, false])
+    }
+
+    func testItCanStartATimedSession() {
+        let engine = engine(.timed(1800))
+        engine.toggleQuickStart()
+        guard case .timed(let until) = engine.status.mode else { return XCTFail("not timed") }
+        XCTAssertEqual(until.timeIntervalSinceNow, 1800, accuracy: 5)
+    }
+
+    func testItCanFollowTheAgents() {
+        let engine = engine(.follow)
+        engine.toggleQuickStart()
+        if case .follow = engine.status.mode {} else { XCTFail("not follow") }
+    }
+
+    /// A click stops whatever is running, whichever mode started it.
+    func testItStopsAModeItDidNotStart() {
+        let engine = engine(.indefinite)
+        engine.start(.timed(until: Date().addingTimeInterval(1800)))
+        engine.toggleQuickStart()
+        XCTAssertEqual(engine.status.mode, .off)
+    }
+
+    /// The choice survives the settings file with its number intact.
+    func testItSurvivesARoundTrip() throws {
+        for quick in [QuickStart.indefinite, .follow, .timed(5400)] {
+            var settings = Settings.defaults
+            settings.quickStart = quick
+            let store = SettingsStore(defaults: UserDefaults(suiteName: suite)!)
+            store.save(settings)
+            XCTAssertEqual(store.load().quickStart, quick)
+        }
+    }
+}

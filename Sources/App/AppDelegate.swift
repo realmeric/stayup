@@ -6,6 +6,8 @@ import AppKit
 /// for real. Under XCTest it returns before touching anything, or every test
 /// run would start ticking the engine and reaching for `sudo`.
 final class AppDelegate: NSObject, NSApplicationDelegate {
+    private var statusItem: StatusItemController?
+
     /// Set once launch has actually happened, so a view can tell the
     /// difference between "not started" and "started under test".
     private(set) var launched = false
@@ -25,6 +27,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         // Once, now, so the icon is right before the first twenty seconds are
         // up rather than after them.
         Live.engine.startTicking()
+        statusItem = StatusItemController(engine: Live.engine)
+        HotkeyCenter.shared.action = {
+            Log.menu.debug("shortcut fired")
+            Live.engine.toggleQuickStart()
+        }
+        Live.engine.adoptHotkey()
     }
 
     /// Quit means off, whatever the mode and however the quit arrived. The
