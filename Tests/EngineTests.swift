@@ -297,3 +297,26 @@ final class QuickStartTests: XCTestCase {
         }
     }
 }
+
+/// Starting without being asked.
+@MainActor
+final class StartOnLaunchTests: XCTestCase {
+    /// Off by default. The whole reason this app exists is a flag nobody
+    /// turned off, and a Mac that starts holding it at login is one step from
+    /// that.
+    func testItIsOffByDefault() {
+        XCTAssertFalse(Settings.defaults.startOnLaunch)
+    }
+
+    /// And it survives the settings file, or a login item would forget it
+    /// every time it mattered.
+    func testItSurvivesARoundTrip() {
+        let suite = "launch-\(UUID().uuidString)"
+        defer { UserDefaults().removePersistentDomain(forName: suite) }
+        let store = SettingsStore(defaults: UserDefaults(suiteName: suite)!)
+        var settings = Settings.defaults
+        settings.startOnLaunch = true
+        store.save(settings)
+        XCTAssertTrue(store.load().startOnLaunch)
+    }
+}

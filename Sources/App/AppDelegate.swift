@@ -33,6 +33,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             Live.engine.toggleQuickStart()
         }
         Live.engine.adoptHotkey()
+        // After the first tick, so the helper status is known: starting into a
+        // missing rule would only log a refusal.
+        if Live.engine.settings.startOnLaunch {
+            Live.engine.toggleQuickStart()
+        }
     }
 
     /// Quit means off, whatever the mode and however the quit arrived. The

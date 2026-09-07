@@ -135,6 +135,7 @@ enum Copy {
     static let quickFollow = "Until the agents finish"
     static let quickIndefinite = "Indefinitely"
     static let quickDuration = "For"
+    static let startOnLaunch = "Start a session when StayUp opens"
     static let shortcut = "Shortcut"
     static let shortcutEnabled = "Use a global shortcut"
     static let shortcutExplanation =

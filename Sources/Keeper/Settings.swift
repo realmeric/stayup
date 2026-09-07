@@ -40,6 +40,13 @@ struct Settings: Codable, Equatable {
     /// Indefinite by default, because a click on a coffee cup means "keep it
     /// awake until I say otherwise" and the cap is what keeps that honest.
     var quickStart: QuickStart = .indefinite
+    /// Start a session the moment StayUp launches, without being asked.
+    ///
+    /// Off by default. The whole reason this app exists is a flag nobody
+    /// turned off, and a Mac that starts holding it at login is one step from
+    /// that; but a login item that does nothing until you click it is not much
+    /// of a login item either, so the choice is yours and the cap still holds.
+    var startOnLaunch: Bool = false
     var hotkeyEnabled: Bool = true
     /// Control-Option-Command-B. Registered through Carbon, which needs no
     /// Accessibility permission; a global `NSEvent` monitor would.

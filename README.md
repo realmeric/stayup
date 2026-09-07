@@ -1,9 +1,18 @@
 # StayUp
 
 Keeps this MacBook awake with the lid closed while an agent is working, and
-lets it sleep the moment there is nothing left to wait for. One icon in the
-menu bar, a few durations, and a mode that watches your agents' transcripts and
-stops when they stop. Nothing on the Dock, nothing to type.
+lets it sleep the moment there is nothing left to wait for. Nothing on the
+Dock, nothing to type.
+
+Left click the coffee cup to keep the Mac awake; it fills and turns orange.
+Left click again to let it sleep. Control-Option-Command-B does the same from
+any app. Right click for the durations, the mode that watches your agents'
+transcripts and stops when they stop, and the settings.
+
+The cup is filled while the flag is up and outlined when it is not, so the
+state reads without the colour; a paused session is the awake colour dimmed.
+Both colours and the glyph are yours to change in Settings › Appearance, and
+the shortcut is recorded by pressing it in Settings › General.
 
 ## Why the app you already have does not do this
 

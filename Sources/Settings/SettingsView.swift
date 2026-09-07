@@ -72,6 +72,7 @@ struct SettingsRoomView: View {
                         row(Copy.quickDuration, Copy.duration(quickSeconds))
                     }
                 }
+                Toggle(Copy.startOnLaunch, isOn: $engine.settings.startOnLaunch)
             } header: {
                 Text(Copy.quickStartSection)
             } footer: {

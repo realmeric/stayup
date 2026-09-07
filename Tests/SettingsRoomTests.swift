@@ -27,6 +27,7 @@ final class SettingsRoomTests: XCTestCase {
             "warnBeforeEnd": .sessions,
             "notifications": .general,
             "quickStart": .general,
+            "startOnLaunch": .general,
             "hotkeyEnabled": .general,
             "hotkey": .general,
             "iconStyle": .appearance,
