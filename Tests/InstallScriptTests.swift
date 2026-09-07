@@ -24,11 +24,16 @@ final class InstallScriptTests: XCTestCase {
     /// The rule itself, checked the way the script checks it before putting it
     /// anywhere near `/etc/sudoers.d`. A syntax error there can lock every
     /// `sudo` on the machine; `visudo -cf` on a file you own needs no root.
+    ///
+    /// The user is a uid, because a short name is free-form text: on an
+    /// SSO-enrolled Mac it can be an email address, and it would have to be
+    /// sanitized against sudoers and the shell both. Digits read the same to
+    /// everything.
     func testTheRuleItWouldWriteParses() throws {
         let candidate = URL(fileURLWithPath: NSTemporaryDirectory())
             .appendingPathComponent("stayup-rule-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: candidate) }
-        let line = "alice ALL=(root) NOPASSWD: /usr/bin/pmset -a disablesleep 1, /usr/bin/pmset -a disablesleep 0\n"
+        let line = "#501 ALL=(root) NOPASSWD: /usr/bin/pmset -a disablesleep 1, /usr/bin/pmset -a disablesleep 0\n"
         try Data(line.utf8).write(to: candidate)
         let result = try Shell.run("/usr/sbin/visudo", ["-cf", candidate.path])
         XCTAssertEqual(result.status, 0, result.out + result.err)
@@ -39,7 +44,7 @@ final class InstallScriptTests: XCTestCase {
         let script = try resource("install-helper.sh")
         let text = try String(contentsOf: script, encoding: .utf8)
         XCTAssertTrue(
-            text.contains("$user ALL=(root) NOPASSWD: /usr/bin/pmset -a disablesleep 1, /usr/bin/pmset -a disablesleep 0"),
+            text.contains("#$uid ALL=(root) NOPASSWD: /usr/bin/pmset -a disablesleep 1, /usr/bin/pmset -a disablesleep 0"),
             "the rule in the script is not the rule this test checked")
     }
 
@@ -56,7 +61,7 @@ final class InstallScriptTests: XCTestCase {
 
         let command = HelperInstaller.command(script: echo.path,
                                               arguments: ["remove"],
-                                              user: "alice")
+                                              user: "501")
         XCTAssertTrue(command.hasSuffix("with administrator privileges"))
         // The one word this test must not run under.
         let rehearsal = command.replacingOccurrences(of: " with administrator privileges",
@@ -66,7 +71,7 @@ final class InstallScriptTests: XCTestCase {
         // `$@` is what follows the script path, and the script ran at all
         // from a path with a space in it, which is the thing being proved.
         XCTAssertEqual(result.out.trimmingCharacters(in: .whitespacesAndNewlines),
-                       "[alice]\r[remove]")
+                       "[501]\r[remove]")
     }
 
     func testThePlistIsAPlist() throws {

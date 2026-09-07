@@ -67,3 +67,42 @@ final class FlagWriterTests: XCTestCase {
         XCTAssertTrue(asked.isEmpty)
     }
 }
+
+/// The probe. It is the real call rather than a question about it, because
+/// `sudo -l` lists a rule on Macs where the call itself still prompts, and on
+/// an admin account the blanket `(ALL) ALL` answers the question too.
+final class HelperProbeTests: XCTestCase {
+    private var asked: [[String]] = []
+
+    override func setUp() {
+        super.setUp()
+        asked = []
+        Shell.runner = { path, args in
+            self.asked.append([path] + args)
+            return (0, "", "")
+        }
+    }
+
+    override func tearDown() {
+        Shell.runner = nil
+        super.tearDown()
+    }
+
+    /// The value carried is the one the app wants right now, not the one it
+    /// read. Anything else could put a stale 1 back over a clear the guard
+    /// had just made.
+    func testItProbesWithTheValueTheAppWants() {
+        XCTAssertEqual(HelperInstaller.status(wanting: true), .installed)
+        XCTAssertEqual(asked, [["/usr/bin/sudo", "-n", "/usr/bin/pmset", "-a", "disablesleep", "1"]])
+    }
+
+    func testProbingWhileOffRepeatsTheZero() {
+        XCTAssertEqual(HelperInstaller.status(wanting: false), .installed)
+        XCTAssertEqual(asked, [["/usr/bin/sudo", "-n", "/usr/bin/pmset", "-a", "disablesleep", "0"]])
+    }
+
+    func testARefusalReadsAsMissing() {
+        Shell.runner = { _, _ in (1, "", "sudo: a password is required\n") }
+        XCTAssertEqual(HelperInstaller.status(wanting: false), .missing)
+    }
+}

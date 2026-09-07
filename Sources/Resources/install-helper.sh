@@ -2,8 +2,8 @@
 #
 # The one thing StayUp needs a password for, done once.
 #
-#   install-helper.sh <user>            install the rule and the boot reset
-#   install-helper.sh <user> remove     take both away again
+#   install-helper.sh <uid>            install the rule and the boot reset
+#   install-helper.sh <uid> remove     take both away again
 #
 # Run as root through osascript's administrator prompt, which means a minimal
 # environment and no PATH worth trusting: every path here is absolute. Each
@@ -11,7 +11,7 @@
 
 set -eu
 
-user=${1:?usage: install-helper.sh <user> [remove]}
+uid=${1:?usage: install-helper.sh <uid> [remove]}
 what=${2:-install}
 
 rule=/etc/sudoers.d/stayup
@@ -36,11 +36,14 @@ fi
 # /etc/sudoers.d: a syntax error in that directory can lock every sudo on the
 # machine, and this is the one moment it can still be caught.
 
+# The user is named by uid. `#501` is sudoers' own user spec, and digits read
+# the same to sudoers and to the shell; a short name is free-form text that
+# would have to be sanitized against both.
 candidate=$(/usr/bin/mktemp /tmp/stayup-sudoers.XXXXXX)
-echo "$user ALL=(root) NOPASSWD: /usr/bin/pmset -a disablesleep 1, /usr/bin/pmset -a disablesleep 0" > "$candidate"
+echo "#$uid ALL=(root) NOPASSWD: /usr/bin/pmset -a disablesleep 1, /usr/bin/pmset -a disablesleep 0" > "$candidate"
 if ! /usr/sbin/visudo -cf "$candidate" > /dev/null 2>&1; then
     /bin/rm -f "$candidate"
-    echo "stayup: the rule for '$user' does not parse; nothing was installed" >&2
+    echo "stayup: the rule for uid $uid does not parse; nothing was installed" >&2
     exit 1
 fi
 /usr/bin/install -o root -g wheel -m 0440 "$candidate" "$rule"

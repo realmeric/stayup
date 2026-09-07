@@ -37,7 +37,7 @@ final class Engine: ObservableObject {
     private let agents: AgentSource
     private let writer: FlagWriting
     private var notifier: Notifying
-    private let helperStatus: () -> HelperStatus
+    private let helperStatus: (Bool) -> HelperStatus
     private let leaseBase: URL
     private let interval: TimeInterval
     private var timer: Timer?
@@ -54,7 +54,7 @@ final class Engine: ObservableObject {
          agents: AgentSource = AgentActivity(),
          writer: FlagWriting? = nil,
          notifier: Notifying = LoggingNotifier(),
-         helperStatus: @escaping () -> HelperStatus = { HelperInstaller.status() },
+         helperStatus: @escaping (Bool) -> HelperStatus = { HelperInstaller.status(wanting: $0) },
          leaseBase: URL = Lease.directory,
          interval: TimeInterval = 20) {
         self.keeper = Keeper(settings: settings)
@@ -106,7 +106,9 @@ final class Engine: ObservableObject {
     // MARK: - What the menu calls
 
     func start(_ mode: Mode) {
-        status.helper = helperStatus()
+        // Nothing is running yet, so the probe re-applies 0, which is what
+        // the flag should be reading anyway.
+        status.helper = helperStatus(keeper.raised)
         guard status.helper == .installed else {
             Log.app.error("start refused: the sudoers rule is not installed")
             refreshStatus(inputs: gather())
@@ -209,7 +211,7 @@ final class Engine: ObservableObject {
         status.paused = keeper.paused
         status.raised = keeper.raised
         status.endsAt = endsAt
-        status.helper = helperStatus()
+        status.helper = helperStatus(keeper.raised)
         status.thermal = inputs.thermal
         status.power = inputs.power
         status.lidClosed = inputs.lidClosed

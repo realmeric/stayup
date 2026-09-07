@@ -11,9 +11,14 @@ struct Settings: Codable, Equatable {
     /// How long Indefinite lasts before it stops itself. 0 means never, which
     /// is the setting this whole app exists because of.
     var indefiniteCap: TimeInterval = 86400
+    /// The menu's `Pause when hot`. The level below says how hot; this says
+    /// whether to look at all, because a switch you can find in one click is
+    /// worth more at two in the morning than a picker in a window.
+    var pauseWhenHot: Bool = true
     var thermalPauseLevel: ThermalLevel = .critical
     /// How long the heat has to stay down before a thermal pause lifts.
     var thermalCalm: TimeInterval = 120
+    var pauseOnLowBattery: Bool = true
     var batteryFloor: Int = 15
     var batteryResume: Int = 20
     var onlyWhileCharging: Bool = false

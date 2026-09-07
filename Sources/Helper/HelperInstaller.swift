@@ -18,14 +18,26 @@ enum HelperError: Error, Equatable {
 /// naming exactly two commands, and a LaunchDaemon that takes the flag down at
 /// boot. After this the app runs `sudo -n` and never prompts again.
 enum HelperInstaller {
-    static func status() -> HelperStatus {
-        // `sudo -n -l <command>` asks the question without running anything:
-        // exit 0 and the command echoed back when a rule allows it, exit 1
-        // otherwise, and either way in a millisecond with no prompt.
+    /// Whether the rule is in, asked by using it rather than by asking about
+    /// it.
+    ///
+    /// Not `sudo -n -l`: it lists the rule, and there are Macs on which it
+    /// says yes while the real call still prompts. On an admin account it is
+    /// worse than that, because the blanket `(ALL) ALL` every admin has
+    /// answers the question too; measured here on 2026-09-07 with no StayUp
+    /// rule installed, `sudo -n -l /usr/bin/pmset -a disablesleep 1` exited 0.
+    ///
+    /// So the probe is the real call, carrying the value the app wants right
+    /// now: 1 while a session holds the flag, 0 otherwise. Re-applying the
+    /// wanted value changes nothing, and it cannot put a stale 1 back over a
+    /// clear the guard has just made, which is the race a probe that
+    /// re-applies whatever it read would have to serialize against.
+    static func status(wanting raised: Bool) -> HelperStatus {
         guard let result = try? Shell.run("/usr/bin/sudo",
-                                          ["-n", "-l", "/usr/bin/pmset", "-a", "disablesleep", "1"])
-        else { return .missing }
-        return result.status == 0 ? .installed : .missing
+                                          ["-n", "/usr/bin/pmset", "-a", "disablesleep",
+                                           raised ? "1" : "0"]),
+              result.status == 0 else { return .missing }
+        return .installed
     }
 
     static func install() throws {
@@ -68,7 +80,9 @@ enum HelperInstaller {
     /// absolute. Two levels of quoting meet here, AppleScript's and the
     /// shell's, which is why this is a function with a test rather than a
     /// string built at the call site.
-    static func command(script: String, arguments: [String], user: String = NSUserName()) -> String {
+    static func command(script: String,
+                        arguments: [String],
+                        user: String = String(getuid())) -> String {
         let inner = ([script, user] + arguments)
             .map { "\\\"\($0)\\\"" }
             .joined(separator: " ")

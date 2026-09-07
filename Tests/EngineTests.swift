@@ -42,7 +42,7 @@ final class EngineTests: XCTestCase {
                agents: agents,
                writer: writer,
                notifier: notifier,
-               helperStatus: { self.helper },
+               helperStatus: { _ in self.helper },
                leaseBase: room,
                interval: 3600)
     }

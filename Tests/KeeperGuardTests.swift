@@ -129,6 +129,23 @@ final class KeeperGuardTests: XCTestCase {
                        [.notify(.resumed), .raise])
     }
 
+    /// Switched off from the menu, heat is not consulted at all. The reading
+    /// still arrives; nothing is done with it.
+    func testHeatIsIgnoredWhenTheSwitchIsOff() {
+        keeper.settings.pauseWhenHot = false
+        startTimed()
+        XCTAssertEqual(keeper.tick(inputs: at(20, thermal: .critical)), [])
+        XCTAssertTrue(keeper.raised)
+        XCTAssertNil(keeper.paused)
+    }
+
+    func testTheFloorIsIgnoredWhenTheSwitchIsOff() {
+        keeper.settings.pauseOnLowBattery = false
+        startTimed()
+        XCTAssertEqual(keeper.tick(inputs: at(20, onAC: false, percent: 3)), [])
+        XCTAssertTrue(keeper.raised)
+    }
+
     // MARK: - Only while charging
 
     func testOnlyWhileChargingPausesOnBatteryAtAnyPercent() {

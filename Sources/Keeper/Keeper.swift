@@ -157,8 +157,10 @@ struct Keeper {
     /// because it is a choice you made, then heat, then the battery floor.
     private func pauseReason(_ inputs: Inputs) -> PauseReason? {
         if settings.onlyWhileCharging && !inputs.power.onAC { return .charging }
-        if inputs.thermal >= settings.thermalPauseLevel { return .thermal }
-        if !inputs.power.onAC && inputs.power.percent < settings.batteryFloor { return .battery }
+        if settings.pauseWhenHot, inputs.thermal >= settings.thermalPauseLevel { return .thermal }
+        if settings.pauseOnLowBattery,
+           !inputs.power.onAC,
+           inputs.power.percent < settings.batteryFloor { return .battery }
         return nil
     }
 

@@ -22,6 +22,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         NSApp.setActivationPolicy(.accessory)
         launched = true
         Log.app.info("launched \(AppInfo.version, privacy: .public)")
+        // Once, now, so the icon is right before the first twenty seconds are
+        // up rather than after them.
+        Live.engine.startTicking()
+    }
+
+    /// Quit means off, whatever the mode and however the quit arrived. The
+    /// menu's Quit has already done this by the time we get here; a quit from
+    /// anywhere else has not.
+    func applicationWillTerminate(_ notification: Notification) {
+        guard launched else { return }
+        Live.engine.stop(reason: .quit)
     }
 
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
