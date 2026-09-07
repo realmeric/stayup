@@ -102,6 +102,7 @@ enum Copy {
     static let followCap = "Stop following after"
     static let watchedDirectories = "Transcripts to watch"
     static let addDirectory = "Add a directory"
+    static let directoryPlaceholder = "~/somewhere/transcripts"
 
     static let heat = "Heat"
     static let battery = "Battery"

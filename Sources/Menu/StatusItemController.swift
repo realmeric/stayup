@@ -13,7 +13,7 @@ final class StatusItemController {
     private let engine: Engine
     private let item: NSStatusItem
     private let statusMenu: StatusMenu
-    private var watch: AnyCancellable?
+    private var watches: Set<AnyCancellable> = []
 
     init(engine: Engine) {
         self.engine = engine
@@ -36,9 +36,19 @@ final class StatusItemController {
             button.toolTip = AppInfo.name
         }
 
-        watch = engine.$status.sink { [weak self] status in
-            self?.draw(status)
-        }
+        engine.$status
+            .sink { [weak self] status in self?.draw(status) }
+            .store(in: &watches)
+        // The settings as well as the status. The icon is a function of both,
+        // and a colour chosen in the settings window that does not arrive
+        // until the next twenty-second tick reads as a control that did not
+        // work.
+        engine.$settings
+            .sink { [weak self] _ in
+                guard let self else { return }
+                DispatchQueue.main.async { self.draw(self.engine.status) }
+            }
+            .store(in: &watches)
         draw(engine.status)
     }
 

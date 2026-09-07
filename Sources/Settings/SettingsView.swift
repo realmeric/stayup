@@ -158,8 +158,14 @@ struct SettingsRoomView: View {
             Section(Copy.watchedDirectories) {
                 ForEach(Array(engine.settings.watchedDirectories.enumerated()), id: \.offset) { index, _ in
                     HStack {
-                        TextField("", text: directory(at: index))
+                        // `labelsHidden` on purpose: in a grouped `Form` a
+                        // field with an empty label still claims the label
+                        // column, which pushes the path into the narrow value
+                        // column on the right and right-aligns the text in it.
+                        TextField(Copy.directoryPlaceholder, text: directory(at: index))
                             .textFieldStyle(.roundedBorder)
+                            .labelsHidden()
+                            .frame(maxWidth: .infinity)
                         Button(Copy.remove) {
                             engine.settings.watchedDirectories.remove(at: index)
                         }
