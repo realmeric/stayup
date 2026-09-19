@@ -9,3 +9,6 @@ xcuserdata/
 # The landing page is assembled from its parts by landing/build.py.
 landing/index.html
 landing/artifact.html
+
+# Your signing team; see Signing.xcconfig.
+Signing.local.xcconfig

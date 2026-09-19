@@ -5,6 +5,11 @@ options:
     macOS: "15.0"
   createIntermediateGroups: true
 
+# The team lives outside the repository; see Signing.xcconfig.
+configFiles:
+  Debug: Signing.xcconfig
+  Release: Signing.xcconfig
+
 settings:
   base:
     SWIFT_VERSION: "5.0"
@@ -13,13 +18,9 @@ settings:
     # Bump MARKETING_VERSION for people and CURRENT_PROJECT_VERSION for tools.
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
-    # The only identity on this Mac. The team is the certificate's OU, read with
-    #   security find-certificate -c "Apple Development" -p | openssl x509 -noout -subject
-    # not the code in parentheses beside the name in `security find-identity`;
-    # that one belongs to the certificate itself and xcodebuild rejects it.
+    # DEVELOPMENT_TEAM comes from Signing.local.xcconfig.
     CODE_SIGN_IDENTITY: "Apple Development"
     CODE_SIGN_STYLE: Manual
-    DEVELOPMENT_TEAM: TEAM_ID
     CODE_SIGNING_REQUIRED: "YES"
     CODE_SIGNING_ALLOWED: "YES"
     ENABLE_HARDENED_RUNTIME: "YES"

@@ -109,6 +109,15 @@ will quietly lower it.
 
 ## Building
 
+Signing needs your own Apple Development team, which stays out of the
+repository:
+
+```bash
+echo 'DEVELOPMENT_TEAM = XXXXXXXXXX' > Signing.local.xcconfig
+```
+
+`Signing.xcconfig` says where to find the value.
+
 ```bash
 make test     # generate the project and run the tests
 make run      # build and launch from DerivedData

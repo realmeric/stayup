@@ -1,0 +1,10 @@
+// Your Apple Development team goes in Signing.local.xcconfig, which git
+// ignores, as one line:
+//
+//   DEVELOPMENT_TEAM = XXXXXXXXXX
+//
+// The team is the certificate's OU, read with
+//   security find-certificate -c "Apple Development" -p | openssl x509 -noout -subject
+// not the code in parentheses beside the name in `security find-identity`;
+// that one belongs to the certificate itself and xcodebuild rejects it.
+#include? "Signing.local.xcconfig"

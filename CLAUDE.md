@@ -36,7 +36,7 @@ Work comes from `KANBAN.md`. Take the top card of Ready, read only that card and
 
 ## This machine
 
-macOS 26.6.2, Xcode 26.6, Swift 6.3.3, xcodegen 2.46.0. One signing identity, `Apple Development: developer@example.com (CERT_ID)`, team `TEAM_ID`, no Developer ID. A fanless MacBook Air, user `alice`, uid 501. `SleepDisabled` was found set on 2026-09-06 after 58 hours, cleared by hand at 22:53; `docs/notes.md` "The two sleeps" carries the evidence. Claude Desktop holds an idle assertion whenever it runs, so the lid is the only sleep this Mac ever takes.
+macOS 26.6.2, Xcode 26.6, Swift 6.3.3, xcodegen 2.46.0. One Apple Development signing identity, its team in the untracked `Signing.local.xcconfig`, no Developer ID. A fanless MacBook Air, uid 501. `SleepDisabled` was found set on 2026-09-06 after 58 hours, cleared by hand at 22:53; `docs/notes.md` "The two sleeps" carries the evidence. Claude Desktop holds an idle assertion whenever it runs, so the lid is the only sleep this Mac ever takes.
 
 ## Commits
 

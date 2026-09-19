@@ -4,7 +4,7 @@ A menu bar app that keeps this MacBook Air awake with the lid closed while an ag
 
 Written 2026-09-06 against an empty directory, the same night the problem was traced. The short version of why it exists: on 2026-09-03 at 13:47:05 something ran `pmset -a disablesleep 1` on this Mac, and for the next 58 hours the machine never slept once, lid open or closed, because that flag is the one thing in macOS that overrides a lid close. KeepingYouAwake looked like it was doing that job; it never was, it only ever shells out to `caffeinate`, and `caffeinate` holds an idle assertion that a lid close does not consult. The flag was cleared at 22:53 on 2026-09-06 and the lid slept again at 22:54:25. Every fact behind those sentences is in `docs/notes.md`, with the log lines that prove it. This app is the flag, managed properly: raised for a reason, released for a reason, and impossible to leave on by accident.
 
-What this machine has, checked the same night: macOS 26.6.2, Xcode 26.6, Swift 6.3.3, xcodegen 2.46.0. One signing identity, `Apple Development: developer@example.com (CERT_ID)`, team `TEAM_ID`, no Developer ID. A fanless MacBook Air; `pmset -g therm` has never recorded a warning. User `alice`, uid 501, an admin. `/etc/sudoers.d` exists, root, 755, empty of anything ours. `SleepDisabled` reads 0 now. Power settings as found: `sleep 1`, `displaysleep 2` on battery and 10 on AC, `ttyskeepawake 1`, `hibernatemode 3`. Claude Desktop holds a `NoIdleSleepAssertion` named `Electron` the whole time it runs, so idle sleep with the lid open never happens on this Mac anyway; the lid is the only sleep that matters here. 290 transcripts under `~/.claude/projects`, 17 under `~/.codex/sessions`. KeepingYouAwake 1.6.8 is installed and can stay; it does a different job.
+What this machine has, checked the same night: macOS 26.6.2, Xcode 26.6, Swift 6.3.3, xcodegen 2.46.0. One Apple Development signing identity, its team in the untracked `Signing.local.xcconfig`, no Developer ID. A fanless MacBook Air; `pmset -g therm` has never recorded a warning. uid 501, an admin. `/etc/sudoers.d` exists, root, 755, empty of anything ours. `SleepDisabled` reads 0 now. Power settings as found: `sleep 1`, `displaysleep 2` on battery and 10 on AC, `ttyskeepawake 1`, `hibernatemode 3`. Claude Desktop holds a `NoIdleSleepAssertion` named `Electron` the whole time it runs, so idle sleep with the lid open never happens on this Mac anyway; the lid is the only sleep that matters here. 290 transcripts under `~/.claude/projects`, 17 under `~/.codex/sessions`. KeepingYouAwake 1.6.8 is installed and can stay; it does a different job.
 
 How to work the board: one card at a time, top of Ready first. Read the card and the `docs/notes.md` sections it names, do it, run the gate, commit, move the card under Done with its hash. A card is done when every box under Accept is ticked and the gate is green. Something you notice on the way becomes a one-line entry under Backlog, not a change. The executor is expected to be a smaller effort than the planner, so each card names its files, its types, its APIs and the command that proves it; when a card and the platform disagree, the platform wins and the note gets fixed in the same commit.
 
@@ -27,19 +27,19 @@ Each is written with the recommended option as the default. Strike the other or 
 
 ## Done
 
-- S-01 · Project skeleton that builds, signs and launches · `02da2c4`
-- S-02 · Read the machine · `799e6a9`
-- S-03 · The rule that lets the app raise the flag, installed once · `640bcf2`
-- S-04 · The guard that drops the flag when the app cannot · `285abab`
-- S-05 · The keeper: a state machine with the clock as an argument · `b13fc58`
-- S-06 · Sources and the engine that ticks them · `6af1b27`
-- S-07 · The menu bar item · `f7c6c8f`
-- S-08 · Settings, persisted, with a window for the numbers · `84d2bf8`
-- S-09 · Notifications that say what happened and what happens next · `939d626`
-- S-10 · A real app in /Applications, and launch at login · `6466834`
-- S-12 · README, and the way out · `936ff94`
-- S-14 · One click on a coffee cup, a shortcut, and an icon you choose · `35fd9d0`
-- S-13 · Prove the rule by using it, and grant it by uid · `1c31816`, `8610d71` (filed straight to Done: the card was lost to a concurrent board rewrite, the substance reached the executor through `docs/notes.md` and was built from there)
+- S-01 · Project skeleton that builds, signs and launches · `154f0a8`
+- S-02 · Read the machine · `f5a91f5`
+- S-03 · The rule that lets the app raise the flag, installed once · `efaaeab`
+- S-04 · The guard that drops the flag when the app cannot · `4971c23`
+- S-05 · The keeper: a state machine with the clock as an argument · `58e3691`
+- S-06 · Sources and the engine that ticks them · `256db75`
+- S-07 · The menu bar item · `77f99b2`
+- S-08 · Settings, persisted, with a window for the numbers · `1878217`
+- S-09 · Notifications that say what happened and what happens next · `60adc2d`
+- S-10 · A real app in /Applications, and launch at login · `9da6af3`
+- S-12 · README, and the way out · `7e821ba`
+- S-14 · One click on a coffee cup, a shortcut, and an icon you choose · `f874704`
+- S-13 · Prove the rule by using it, and grant it by uid · `b0dfb2e`, `80b4334` (filed straight to Done: the card was lost to a concurrent board rewrite, the substance reached the executor through `docs/notes.md` and was built from there)
 - The screen's own timer, held alongside the flag (no card: reported directly, and the measurement that settled it is in `docs/notes.md`, "The two sleeps")
 
 ## In progress
